@@ -401,6 +401,10 @@ func simpleResultMapper[T any](r *Response) (T, error) {
 		var t T
 		return t, fmt.Errorf("unexpected status code: %d", r.StatusCode)
 	}
+	if r.StatusCode == 204 {
+		var t T
+		return t, nil
+	}
 	return r.Result.(T), nil
 }
 
