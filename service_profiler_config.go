@@ -9,10 +9,18 @@ type (
 		FullName string `json:"fullName"`
 	}
 
+	ProfilerConfigurationPropsProvider interface {
+		RestBaseURL() (string, error)
+		WSPubsubService() (string, error)
+		Topic() (string, error)
+	}
+
 	ProfilerConfiguration interface {
 		PxGridService
 
 		GetProfiles() CallFinalizer[*[]Profile]
+
+		Properties() ProfilerConfigurationPropsProvider
 	}
 
 	pxGridProfilerConfiguration struct {
@@ -46,4 +54,20 @@ func (s *pxGridProfilerConfiguration) GetProfiles() CallFinalizer[*[]Profile] {
 			return &r.Result.(*response).Profiles, nil
 		},
 	)
+}
+
+func (s *pxGridProfilerConfiguration) Properties() ProfilerConfigurationPropsProvider {
+	return s
+}
+
+func (s *pxGridProfilerConfiguration) RestBaseURL() (string, error) {
+	return s.nodes.GetPropertyString("restBaseUrl")
+}
+
+func (s *pxGridProfilerConfiguration) WSPubsubService() (string, error) {
+	return s.nodes.GetPropertyString("wsPubsubService")
+}
+
+func (s *pxGridProfilerConfiguration) Topic() (string, error) {
+	return s.nodes.GetPropertyString("topic")
 }

@@ -27,7 +27,7 @@ var _ PxGridService = (*pxGridService)(nil)
 
 type pxGridService struct {
 	name  string
-	nodes []ServiceNode
+	nodes ServiceNodeSlice
 	ctrl  Controller
 }
 

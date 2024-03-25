@@ -44,11 +44,19 @@ type (
 		OriginalCallingStationID string   `json:"originalCallingStationId"`
 	}
 
+	RadiusFailurePropsProvider interface {
+		RestBaseURL() (string, error)
+		WSPubsubService() (string, error)
+		FailureTopic() (string, error)
+	}
+
 	RadiusFailure interface {
 		PxGridService
 
 		GetFailures() CallFinalizer[*[]Failure]
 		GetFailureByID(id string) CallFinalizer[*Failure]
+
+		Properties() RadiusFailurePropsProvider
 	}
 
 	pxGridRadiusFailure struct {
@@ -96,4 +104,20 @@ func (r *pxGridRadiusFailure) GetFailureByID(id string) CallFinalizer[*Failure] 
 		map[string]any{"id": id},
 		simpleResultMapper[*Failure],
 	)
+}
+
+func (r *pxGridRadiusFailure) Properties() RadiusFailurePropsProvider {
+	return r
+}
+
+func (r *pxGridRadiusFailure) RestBaseURL() (string, error) {
+	return r.nodes.GetPropertyString("restBaseUrl")
+}
+
+func (r *pxGridRadiusFailure) WSPubsubService() (string, error) {
+	return r.nodes.GetPropertyString("wsPubsubService")
+}
+
+func (r *pxGridRadiusFailure) FailureTopic() (string, error) {
+	return r.nodes.GetPropertyString("failureTopic")
 }

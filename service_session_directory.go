@@ -77,6 +77,14 @@ type (
 		Type GroupType `json:"type"`
 	}
 
+	SessionDirectoryPropsProvider interface {
+		RestBaseURL() (string, error)
+		WSPubsubService() (string, error)
+		SessionTopic() (string, error)
+		SessionTopicAll() (string, error)
+		GroupTopic() (string, error)
+	}
+
 	SessionDirectory interface {
 		PxGridService
 
@@ -86,6 +94,8 @@ type (
 		GetSessionByMacAddress(macAddress string) CallFinalizer[*Session]
 		GetUserGroups(filter any) CallFinalizer[*[]Group]
 		GetUserGroupByUserName(userName string) CallFinalizer[*[]Group]
+
+		Properties() SessionDirectoryPropsProvider
 	}
 
 	pxGridSessionDirectory struct {
@@ -247,4 +257,28 @@ func (s *pxGridSessionDirectory) GetUserGroupByUserName(userName string) CallFin
 			return &r.Result.(*response).Groups, nil
 		},
 	)
+}
+
+func (s *pxGridSessionDirectory) Properties() SessionDirectoryPropsProvider {
+	return s
+}
+
+func (s *pxGridSessionDirectory) RestBaseURL() (string, error) {
+	return s.nodes.GetPropertyString("restBaseUrl")
+}
+
+func (s *pxGridSessionDirectory) WSPubsubService() (string, error) {
+	return s.nodes.GetPropertyString("wsPubsubService")
+}
+
+func (s *pxGridSessionDirectory) SessionTopic() (string, error) {
+	return s.nodes.GetPropertyString("sessionTopic")
+}
+
+func (s *pxGridSessionDirectory) SessionTopicAll() (string, error) {
+	return s.nodes.GetPropertyString("sessionTopicAll")
+}
+
+func (s *pxGridSessionDirectory) GroupTopic() (string, error) {
+	return s.nodes.GetPropertyString("groupTopic")
 }

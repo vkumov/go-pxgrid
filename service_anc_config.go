@@ -58,6 +58,12 @@ type (
 	}
 )
 
+type ANCConfigPropsProvider interface {
+	RestBaseURL() (string, error)
+	WSPubsubService() (string, error)
+	StatusTopic() (string, error)
+}
+
 type ANCConfig interface {
 	PxGridService
 
@@ -79,6 +85,8 @@ type ANCConfig interface {
 	ClearEndpointPolicy(request ANCClearPolicyRequest) CallFinalizer[*ANCOperationStatus]
 
 	GetOperationStatus(operationID string) CallFinalizer[*ANCOperationStatus]
+
+	Properties() ANCConfigPropsProvider
 }
 
 type pxGridANC struct {
@@ -332,4 +340,20 @@ func (a *pxGridANC) ClearEndpointPolicy(request ANCClearPolicyRequest) CallFinal
 		request,
 		simpleResultMapper[*ANCOperationStatus],
 	)
+}
+
+func (a *pxGridANC) Properties() ANCConfigPropsProvider {
+	return a
+}
+
+func (a *pxGridANC) RestBaseURL() (string, error) {
+	return a.nodes.GetPropertyString("restBaseUrl")
+}
+
+func (a *pxGridANC) WSPubsubService() (string, error) {
+	return a.nodes.GetPropertyString("wsPubsubService")
+}
+
+func (a *pxGridANC) StatusTopic() (string, error) {
+	return a.nodes.GetPropertyString("statusTopic")
 }

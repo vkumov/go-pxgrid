@@ -26,6 +26,12 @@ type (
 
 	MDMOSType string
 
+	MDMPropsProvider interface {
+		RestBaseURL() (string, error)
+		WSPubsubService() (string, error)
+		EndpointTopic() (string, error)
+	}
+
 	MDM interface {
 		PxGridService
 
@@ -33,6 +39,8 @@ type (
 		GetEndpointByMacAddress(macAddress string) CallFinalizer[*MDMEndpoint]
 		GetEndpointsByType(endpointType MDMEndpointType) CallFinalizer[*[]MDMEndpoint]
 		GetEndpointsByOsType(osType MDMOSType) CallFinalizer[*[]MDMEndpoint]
+
+		Properties() MDMPropsProvider
 	}
 
 	pxGridMDM struct {
@@ -137,4 +145,20 @@ func (s *pxGridMDM) GetEndpointsByOsType(osType MDMOSType) CallFinalizer[*[]MDME
 			return &r.Result.(*response).Endpoints, nil
 		},
 	)
+}
+
+func (s *pxGridMDM) Properties() MDMPropsProvider {
+	return s
+}
+
+func (s *pxGridMDM) RestBaseURL() (string, error) {
+	return s.nodes.GetPropertyString("restBaseUrl")
+}
+
+func (s *pxGridMDM) WSPubsubService() (string, error) {
+	return s.nodes.GetPropertyString("wsPubsubService")
+}
+
+func (s *pxGridMDM) EndpointTopic() (string, error) {
+	return s.nodes.GetPropertyString("endpointTopic")
 }
