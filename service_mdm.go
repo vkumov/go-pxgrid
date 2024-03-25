@@ -1,6 +1,9 @@
 package gopxgrid
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	MDMEndpoint struct {
@@ -32,6 +35,10 @@ type (
 		EndpointTopic() (string, error)
 	}
 
+	MDMSubscriber interface {
+		OnEndpointTopic() (*Subscription[MDMEndpoint], error)
+	}
+
 	MDM interface {
 		PxGridService
 
@@ -39,6 +46,8 @@ type (
 		GetEndpointByMacAddress(macAddress string) CallFinalizer[*MDMEndpoint]
 		GetEndpointsByType(endpointType MDMEndpointType) CallFinalizer[*[]MDMEndpoint]
 		GetEndpointsByOsType(osType MDMOSType) CallFinalizer[*[]MDMEndpoint]
+
+		Subscribe() MDMSubscriber
 
 		Properties() MDMPropsProvider
 	}
@@ -161,4 +170,12 @@ func (s *pxGridMDM) WSPubsubService() (string, error) {
 
 func (s *pxGridMDM) EndpointTopic() (string, error) {
 	return s.nodes.GetPropertyString("endpointTopic")
+}
+
+func (s *pxGridMDM) Subscribe() MDMSubscriber {
+	return s
+}
+
+func (s *pxGridMDM) OnEndpointTopic() (*Subscription[MDMEndpoint], error) {
+	return nil, errors.New("not implemented")
 }

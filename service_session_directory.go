@@ -1,6 +1,9 @@
 package gopxgrid
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	SessionState string
@@ -77,12 +80,27 @@ type (
 		Type GroupType `json:"type"`
 	}
 
+	SessionTopicMessage struct {
+		Sequence int       `json:"sequence"`
+		Sessions []Session `json:"sessions"`
+	}
+
+	GroupTopicMessage struct {
+		UserGroups []Group `json:"userGroups"`
+	}
+
 	SessionDirectoryPropsProvider interface {
 		RestBaseURL() (string, error)
 		WSPubsubService() (string, error)
 		SessionTopic() (string, error)
 		SessionTopicAll() (string, error)
 		GroupTopic() (string, error)
+	}
+
+	SessionDirectorySubscriber interface {
+		OnSessionTopic() (*Subscription[SessionTopicMessage], error)
+		OnSessionTopicAll() (*Subscription[SessionTopicMessage], error)
+		OnGroupTopic() (*Subscription[GroupTopicMessage], error)
 	}
 
 	SessionDirectory interface {
@@ -94,6 +112,8 @@ type (
 		GetSessionByMacAddress(macAddress string) CallFinalizer[*Session]
 		GetUserGroups(filter any) CallFinalizer[*[]Group]
 		GetUserGroupByUserName(userName string) CallFinalizer[*[]Group]
+
+		Subscribe() SessionDirectorySubscriber
 
 		Properties() SessionDirectoryPropsProvider
 	}
@@ -281,4 +301,20 @@ func (s *pxGridSessionDirectory) SessionTopicAll() (string, error) {
 
 func (s *pxGridSessionDirectory) GroupTopic() (string, error) {
 	return s.nodes.GetPropertyString("groupTopic")
+}
+
+func (s *pxGridSessionDirectory) Subscribe() SessionDirectorySubscriber {
+	return s
+}
+
+func (s *pxGridSessionDirectory) OnSessionTopic() (*Subscription[SessionTopicMessage], error) {
+	return nil, errors.New("not implemented")
+}
+
+func (s *pxGridSessionDirectory) OnSessionTopicAll() (*Subscription[SessionTopicMessage], error) {
+	return nil, errors.New("not implemented")
+}
+
+func (s *pxGridSessionDirectory) OnGroupTopic() (*Subscription[GroupTopicMessage], error) {
+	return nil, errors.New("not implemented")
 }

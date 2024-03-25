@@ -9,6 +9,14 @@ var (
 	ErrInvalidInput = fmt.Errorf("invalid input")
 )
 
+type OperationType string
+
+const (
+	OperationTypeCreate OperationType = "CREATE"
+	OperationTypeUpdate OperationType = "UPDATE"
+	OperationTypeDelete OperationType = "DELETE"
+)
+
 type SupportedRESTCallDetails struct {
 	Name   string   `json:"name"`
 	Params []string `json:"params"`

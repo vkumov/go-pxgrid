@@ -67,42 +67,48 @@ const (
 	ANCStatusRunning ANCStatus = "RUNNING"
 )
 
-type ANCConfigPropsProvider interface {
-	RestBaseURL() (string, error)
-	WSPubsubService() (string, error)
-	StatusTopic() (string, error)
-}
+type (
+	ANCConfigPropsProvider interface {
+		RestBaseURL() (string, error)
+		WSPubsubService() (string, error)
+		StatusTopic() (string, error)
+	}
 
-type ANCConfig interface {
-	PxGridService
+	ANCSubscriber interface {
+		OnStatusTopic() (*Subscription[ANCOperationStatus], error)
+	}
 
-	GetPolicies() CallFinalizer[*[]ANCPolicy]
-	GetPolicyByName(name string) CallFinalizer[*ANCPolicy]
-	CreatePolicy(policy ANCPolicy) NoResultCallFinalizer
-	DeletePolicyByName(name string) NoResultCallFinalizer
+	ANCConfig interface {
+		PxGridService
 
-	GetEndpoints() CallFinalizer[*[]ANCEndpoint]
-	GetEndpointPolicies() CallFinalizer[*[]ANCEndpoint]
-	GetEndpointByMAC(mac string) CallFinalizer[*ANCEndpoint]
-	GetEndpointByNasIPAddress(mac, nasIP string) CallFinalizer[*ANCEndpoint]
-	ApplyEndpointByIPAddress(ip, policyName string) CallFinalizer[*ANCOperationStatus]
-	ApplyEndpointByMACAddress(mac, policyName string) CallFinalizer[*ANCOperationStatus]
-	ClearEndpointByIPAddress(ip, policyName string) CallFinalizer[*ANCOperationStatus]
-	ClearEndpointByMACAddress(mac, policyName string) CallFinalizer[*ANCOperationStatus]
+		GetPolicies() CallFinalizer[*[]ANCPolicy]
+		GetPolicyByName(name string) CallFinalizer[*ANCPolicy]
+		CreatePolicy(policy ANCPolicy) NoResultCallFinalizer
+		DeletePolicyByName(name string) NoResultCallFinalizer
 
-	ApplyEndpointPolicy(request ANCApplyPolicyRequest) CallFinalizer[*ANCOperationStatus]
-	ClearEndpointPolicy(request ANCClearPolicyRequest) CallFinalizer[*ANCOperationStatus]
+		GetEndpoints() CallFinalizer[*[]ANCEndpoint]
+		GetEndpointPolicies() CallFinalizer[*[]ANCEndpoint]
+		GetEndpointByMAC(mac string) CallFinalizer[*ANCEndpoint]
+		GetEndpointByNasIPAddress(mac, nasIP string) CallFinalizer[*ANCEndpoint]
+		ApplyEndpointByIPAddress(ip, policyName string) CallFinalizer[*ANCOperationStatus]
+		ApplyEndpointByMACAddress(mac, policyName string) CallFinalizer[*ANCOperationStatus]
+		ClearEndpointByIPAddress(ip, policyName string) CallFinalizer[*ANCOperationStatus]
+		ClearEndpointByMACAddress(mac, policyName string) CallFinalizer[*ANCOperationStatus]
 
-	GetOperationStatus(operationID string) CallFinalizer[*ANCOperationStatus]
+		ApplyEndpointPolicy(request ANCApplyPolicyRequest) CallFinalizer[*ANCOperationStatus]
+		ClearEndpointPolicy(request ANCClearPolicyRequest) CallFinalizer[*ANCOperationStatus]
 
-	SubscribeStatusTopic() (*Subscription[ANCOperationStatus], error)
+		GetOperationStatus(operationID string) CallFinalizer[*ANCOperationStatus]
 
-	Properties() ANCConfigPropsProvider
-}
+		Subscribe() ANCSubscriber
 
-type pxGridANC struct {
-	pxGridService
-}
+		Properties() ANCConfigPropsProvider
+	}
+
+	pxGridANC struct {
+		pxGridService
+	}
+)
 
 func NewPxGridANCConfig(ctrl Controller) ANCConfig {
 	return &pxGridANC{
@@ -369,7 +375,10 @@ func (a *pxGridANC) StatusTopic() (string, error) {
 	return a.nodes.GetPropertyString("statusTopic")
 }
 
-func (a *pxGridANC) SubscribeStatusTopic() (*Subscription[ANCOperationStatus], error) {
-	//
+func (a *pxGridANC) Subscribe() ANCSubscriber {
+	return a
+}
+
+func (a *pxGridANC) OnStatusTopic() (*Subscription[ANCOperationStatus], error) {
 	return nil, errors.New("not implemented")
 }

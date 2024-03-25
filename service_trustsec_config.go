@@ -13,8 +13,6 @@ type (
 		EgressPolicyTopic() (string, error)
 	}
 
-	TrustSecOperation string
-
 	EgressMatrix struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
@@ -100,12 +98,6 @@ type (
 	pxGridTrustSecConfiguration struct {
 		pxGridService
 	}
-)
-
-const (
-	TrustSecOperationCreate TrustSecOperation = "CREATE"
-	TrustSecOperationUpdate TrustSecOperation = "UPDATE"
-	TrustSecOperationDelete TrustSecOperation = "DELETE"
 )
 
 func NewPxGridTrustSecConfiguration(ctrl Controller) TrustSecConfiguration {

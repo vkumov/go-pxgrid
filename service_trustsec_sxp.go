@@ -1,6 +1,9 @@
 package gopxgrid
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	TrustSecSXPBinding struct {
@@ -11,16 +14,27 @@ type (
 		VPN          string `json:"vpn"`
 	}
 
+	TrustSecSXPBindingTopicMessage struct {
+		OperationType OperationType      `json:"operation"`
+		Binding       TrustSecSXPBinding `json:"binding"`
+	}
+
 	TrustSecSXPPropsProvider interface {
 		RestBaseURL() (string, error)
 		WSPubsubService() (string, error)
 		BindingTopic() (string, error)
 	}
 
+	TrustSecSXPSubscriber interface {
+		OnBindingTopic() (*Subscription[TrustSecSXPBindingTopicMessage], error)
+	}
+
 	TrustSecSXP interface {
 		PxGridService
 
 		GetBindings(filter any) CallFinalizer[*[]TrustSecSXPBinding]
+
+		Subscribe() TrustSecSXPSubscriber
 
 		Properties() TrustSecSXPPropsProvider
 	}
@@ -79,4 +93,12 @@ func (t *pxGridTrustSecSXP) GetBindings(filter any) CallFinalizer[*[]TrustSecSXP
 			return &r.Result.(*response).Bindings, nil
 		},
 	)
+}
+
+func (t *pxGridTrustSecSXP) Subscribe() TrustSecSXPSubscriber {
+	return t
+}
+
+func (t *pxGridTrustSecSXP) OnBindingTopic() (*Subscription[TrustSecSXPBindingTopicMessage], error) {
+	return nil, errors.New("not implemented")
 }

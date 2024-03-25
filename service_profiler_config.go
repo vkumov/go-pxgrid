@@ -1,6 +1,9 @@
 package gopxgrid
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	Profile struct {
@@ -9,16 +12,27 @@ type (
 		FullName string `json:"fullName"`
 	}
 
+	ProfilerTopicMessage struct {
+		OperationType OperationType `json:"operation"`
+		Profile       Profile       `json:"profile"`
+	}
+
 	ProfilerConfigurationPropsProvider interface {
 		RestBaseURL() (string, error)
 		WSPubsubService() (string, error)
 		Topic() (string, error)
 	}
 
+	ProfilerConfigurationSubscriber interface {
+		OnProfileTopic() (*Subscription[ProfilerTopicMessage], error)
+	}
+
 	ProfilerConfiguration interface {
 		PxGridService
 
 		GetProfiles() CallFinalizer[*[]Profile]
+
+		Subscribe() ProfilerConfigurationSubscriber
 
 		Properties() ProfilerConfigurationPropsProvider
 	}
@@ -70,4 +84,12 @@ func (s *pxGridProfilerConfiguration) WSPubsubService() (string, error) {
 
 func (s *pxGridProfilerConfiguration) Topic() (string, error) {
 	return s.nodes.GetPropertyString("topic")
+}
+
+func (s *pxGridProfilerConfiguration) Subscribe() ProfilerConfigurationSubscriber {
+	return s
+}
+
+func (s *pxGridProfilerConfiguration) OnProfileTopic() (*Subscription[ProfilerTopicMessage], error) {
+	return nil, errors.New("not implemented")
 }

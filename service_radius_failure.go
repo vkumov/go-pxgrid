@@ -1,6 +1,9 @@
 package gopxgrid
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	Failure struct {
@@ -44,10 +47,19 @@ type (
 		OriginalCallingStationID string   `json:"originalCallingStationId"`
 	}
 
+	FailureTopicMessage struct {
+		Sequence int       `json:"sequence"`
+		Failures []Failure `json:"failures"`
+	}
+
 	RadiusFailurePropsProvider interface {
 		RestBaseURL() (string, error)
 		WSPubsubService() (string, error)
 		FailureTopic() (string, error)
+	}
+
+	RadiusFailureSubscriber interface {
+		OnFailureTopic() (*Subscription[FailureTopicMessage], error)
 	}
 
 	RadiusFailure interface {
@@ -55,6 +67,8 @@ type (
 
 		GetFailures() CallFinalizer[*[]Failure]
 		GetFailureByID(id string) CallFinalizer[*Failure]
+
+		Subscribe() RadiusFailureSubscriber
 
 		Properties() RadiusFailurePropsProvider
 	}
@@ -120,4 +134,12 @@ func (r *pxGridRadiusFailure) WSPubsubService() (string, error) {
 
 func (r *pxGridRadiusFailure) FailureTopic() (string, error) {
 	return r.nodes.GetPropertyString("failureTopic")
+}
+
+func (r *pxGridRadiusFailure) Subscribe() RadiusFailureSubscriber {
+	return r
+}
+
+func (r *pxGridRadiusFailure) OnFailureTopic() (*Subscription[FailureTopicMessage], error) {
+	return nil, errors.New("not implemented")
 }

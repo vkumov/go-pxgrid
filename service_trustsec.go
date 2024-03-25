@@ -1,5 +1,7 @@
 package gopxgrid
 
+import "errors"
+
 type (
 	Policy struct {
 		SourceSGT                  int    `json:"sourceSgt"`
@@ -23,13 +25,23 @@ type (
 		Policies        []Policy             `json:"policies"`
 	}
 
+	PolicyDownloadTopicMessage struct {
+		PolicyDownloads []PolicyDownload `json:"policyDownloads"`
+	}
+
 	TrustSecPropsProvider interface {
 		WSPubsubService() (string, error)
 		PolicyDownloadTopic() (string, error)
 	}
 
+	TrustSecSubscriber interface {
+		OnPolicyDownloadTopic() (*Subscription[PolicyDownloadTopicMessage], error)
+	}
+
 	TrustSec interface {
 		PxGridService
+
+		Subscribe() TrustSecSubscriber
 
 		Properties() TrustSecPropsProvider
 	}
@@ -63,4 +75,12 @@ func (t *pxGridTrustSec) WSPubsubService() (string, error) {
 
 func (t *pxGridTrustSec) PolicyDownloadTopic() (string, error) {
 	return t.nodes.GetPropertyString("policyDownloadTopic")
+}
+
+func (t *pxGridTrustSec) Subscribe() TrustSecSubscriber {
+	return t
+}
+
+func (t *pxGridTrustSec) OnPolicyDownloadTopic() (*Subscription[PolicyDownloadTopicMessage], error) {
+	return nil, errors.New("not implemented")
 }
