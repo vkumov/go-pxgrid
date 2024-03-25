@@ -8,15 +8,19 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 
 	"github.com/go-resty/resty/v2"
 )
 
 type service struct {
-	client *resty.Client
-	tls    *TLSConfig
-	dns    *DNSConfig
-	auth   AuthConfig
+	client   *resty.Client
+	tls      *TLSConfig
+	dns      *DNSConfig
+	resolver *net.Resolver
+	auth     AuthConfig
+
+	tlsMutex sync.RWMutex
 }
 
 func dnsCfg(cfg *DNSConfig) *DNSConfig {
@@ -37,6 +41,14 @@ func tlsCfg(cfg *TLSConfig) *TLSConfig {
 			VerifyMode: CertVerifyModeCA,
 		}
 	}
+
+	if len(cfg.CA) > 0 {
+		cfg.pool = x509.NewCertPool()
+		for _, c := range cfg.CA {
+			cfg.pool.AddCert(&c)
+		}
+	}
+
 	return cfg
 }
 
@@ -46,6 +58,16 @@ func newService(cfg *PxGridConfig) *service {
 		tls:    tlsCfg(&cfg.TLS),
 		dns:    dnsCfg(&cfg.DNS),
 		auth:   cfg.Auth,
+	}
+
+	if s.dns.Server != "" {
+		s.resolver = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{}
+				return d.DialContext(ctx, "udp", s.dns.Server)
+			},
+		}
 	}
 
 	if s.tls.VerifyMode == CertVerifyModeNone {
@@ -115,20 +137,12 @@ func (s *service) getOneIPAddr(addrs []net.IPAddr, err error) (net.IPAddr, error
 	return net.IPAddr{}, &net.AddrError{Err: "unknown strategy", Addr: ""}
 }
 
-func (s *service) resolveHost(ctx context.Context, host string) (net.IPAddr, error) {
-	if s.dns == nil {
+func (s *service) ResolveHost(ctx context.Context, host string) (net.IPAddr, error) {
+	if s.resolver == nil {
 		return s.getOneIPAddr(net.DefaultResolver.LookupIPAddr(ctx, host))
 	}
 
-	resolver := net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{}
-			return d.DialContext(ctx, "udp", s.dns.Server)
-		},
-	}
-
-	return s.getOneIPAddr(resolver.LookupIPAddr(ctx, host))
+	return s.getOneIPAddr(s.resolver.LookupIPAddr(ctx, host))
 }
 
 func (s *service) UpdateClientCertificate(cert *tls.Certificate) {
@@ -225,7 +239,7 @@ func (r *Request) Post(u string, payload interface{}) (*Response, error) {
 	}
 
 	hostname := o.Hostname()
-	ip, err := r.s.resolveHost(r.ctx, hostname)
+	ip, err := r.s.ResolveHost(r.ctx, hostname)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve host: %w", err)
 	}
@@ -265,6 +279,31 @@ func (r *Request) Post(u string, payload interface{}) (*Response, error) {
 	}
 
 	return &done, nil
+}
+
+func (s *service) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Resolver: s.resolver,
+	}
+	return dialer.DialContext(ctx, network, addr)
+}
+
+func (s *service) ClientTLSConfig() *tls.Config {
+	s.tlsMutex.RLock()
+	defer s.tlsMutex.RUnlock()
+
+	tls := &tls.Config{}
+	if s.tls.ClientCertificate != nil {
+		tls.Certificates = append(tls.Certificates, *s.tls.ClientCertificate)
+	}
+	if s.tls.VerifyMode == CertVerifyModeNone {
+		tls.InsecureSkipVerify = true
+	}
+	if s.tls.pool != nil {
+		tls.RootCAs = s.tls.pool.Clone()
+	}
+
+	return tls
 }
 
 func (s *service) NewRequest(ctx context.Context) *Request {

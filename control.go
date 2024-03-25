@@ -2,8 +2,10 @@ package gopxgrid
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 )
 
 var (
@@ -46,6 +48,9 @@ type (
 		AccountActivate(ctx context.Context) error
 		ServiceLookup(ctx context.Context, svc string) (ServiceLookupResponse, error)
 		AccessSecret(ctx context.Context, peerNodeName string) (string, error)
+
+		DialContext(ctx context.Context, network, addr string) (net.Conn, error)
+		ClientTLSConfig() *tls.Config
 	}
 )
 
@@ -132,6 +137,14 @@ func (c *PxGridConsumer) AccessSecret(ctx context.Context, peerNodeName string) 
 
 	got := res.Result.(*AccessSecretResponse)
 	return got.Secret, nil
+}
+
+func (c *PxGridConsumer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	return c.svc.DialContext(ctx, network, addr)
+}
+
+func (c *PxGridConsumer) ClientTLSConfig() *tls.Config {
+	return c.svc.ClientTLSConfig()
 }
 
 func (s ServiceNodeSlice) GetProperty(name string) (any, error) {

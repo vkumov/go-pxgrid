@@ -1,6 +1,7 @@
 package gopxgrid
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -28,12 +29,14 @@ type (
 		ID      string            `json:"id"`
 	}
 
+	ANCStatus string
+
 	ANCOperationStatus struct {
-		ID            string `json:"operationId"`
-		Status        string `json:"status"`
-		MACAddress    string `json:"macAddress,omitempty"`
-		NASIPAddress  string `json:"nasIpAddress,omitempty"`
-		FailureReason string `json:"failureReason,omitempty"`
+		ID            string    `json:"operationId"`
+		Status        ANCStatus `json:"status"`
+		MACAddress    string    `json:"macAddress,omitempty"`
+		NASIPAddress  string    `json:"nasIpAddress,omitempty"`
+		FailureReason string    `json:"failureReason,omitempty"`
 	}
 
 	ANCEndpoint struct {
@@ -56,6 +59,12 @@ type (
 		MACAddress   string `json:"macAddress"`
 		NASIPAddress string `json:"nasIpAddress"`
 	}
+)
+
+const (
+	ANCStatusSuccess ANCStatus = "SUCCESS"
+	ANCStatusFailure ANCStatus = "FAILURE"
+	ANCStatusRunning ANCStatus = "RUNNING"
 )
 
 type ANCConfigPropsProvider interface {
@@ -86,6 +95,8 @@ type ANCConfig interface {
 
 	GetOperationStatus(operationID string) CallFinalizer[*ANCOperationStatus]
 
+	SubscribeStatusTopic() (*Subscription[ANCOperationStatus], error)
+
 	Properties() ANCConfigPropsProvider
 }
 
@@ -93,7 +104,7 @@ type pxGridANC struct {
 	pxGridService
 }
 
-func NewANCConfigService(ctrl Controller) ANCConfig {
+func NewPxGridANCConfig(ctrl Controller) ANCConfig {
 	return &pxGridANC{
 		pxGridService: pxGridService{
 			name: "com.cisco.ise.config.anc",
@@ -356,4 +367,9 @@ func (a *pxGridANC) WSPubsubService() (string, error) {
 
 func (a *pxGridANC) StatusTopic() (string, error) {
 	return a.nodes.GetPropertyString("statusTopic")
+}
+
+func (a *pxGridANC) SubscribeStatusTopic() (*Subscription[ANCOperationStatus], error) {
+	//
+	return nil, errors.New("not implemented")
 }

@@ -33,7 +33,6 @@ type DNSConfig struct {
 type Host struct {
 	Host        string
 	ControlPort int
-	CA          []x509.Certificate
 }
 
 type AuthConfig struct {
@@ -44,6 +43,9 @@ type AuthConfig struct {
 type TLSConfig struct {
 	ClientCertificate *tls.Certificate
 	VerifyMode        CertVerifyMode
+	CA                []x509.Certificate
+
+	pool *x509.CertPool
 }
 
 type PxGridConfig struct {

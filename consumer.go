@@ -2,23 +2,54 @@ package gopxgrid
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
 type PxGridConsumer struct {
 	cfg *PxGridConfig
 	svc *service
+
+	ancConfig        ANCConfig
+	endpointAsset    EndpointAsset
+	mdm              MDM
+	profilerConfig   ProfilerConfiguration
+	pubsub           PubSub
+	radiusFailure    RadiusFailure
+	sessionDirectory SessionDirectory
+	systemHealth     SystemHealth
+	trustsecConfig   TrustSecConfiguration
+	trustsecSxp      TrustSecSXP
+	trustsec         TrustSec
 }
 
 var (
 	ErrNoHosts = fmt.Errorf("no hosts available")
 )
 
-func NewPxGridConsumer(cfg *PxGridConfig) *PxGridConsumer {
-	return &PxGridConsumer{
+func NewPxGridConsumer(cfg *PxGridConfig) (*PxGridConsumer, error) {
+	if cfg == nil {
+		return nil, errors.New("invalid config")
+	}
+
+	c := &PxGridConsumer{
 		cfg: cfg,
 		svc: newService(cfg),
 	}
+
+	c.ancConfig = NewPxGridANCConfig(c)
+	c.endpointAsset = NewPxGridEndpointAsset(c)
+	c.mdm = NewPxGridMDM(c)
+	c.profilerConfig = NewPxGridProfilerConfiguration(c)
+	c.pubsub = NewPxGridPubSub(c)
+	c.radiusFailure = NewPxGridRadiusFailure(c)
+	c.sessionDirectory = NewPxGridSessionDirectory(c)
+	c.systemHealth = NewPxGridSystemHealth(c)
+	c.trustsecConfig = NewPxGridTrustSecConfiguration(c)
+	c.trustsecSxp = NewPxGridTrustSecSXP(c)
+	c.trustsec = NewPxGridTrustSec(c)
+
+	return c, nil
 }
 
 type RESTOptions struct {
@@ -42,6 +73,9 @@ func (c *PxGridConsumer) RESTRequest(ctx context.Context, fullURL string, payloa
 	}
 	if ops.result != nil {
 		req.SetResult(ops.result)
+	}
+	if c.svc.tls.pool != nil {
+		req.SetRootCAs(c.svc.tls.pool)
 	}
 
 	res, err := req.Post(fullURL, payload)
@@ -67,4 +101,48 @@ func (c *PxGridConsumer) controlRest(ctx context.Context, urlControl string, pay
 	}
 
 	return nil, ErrNoHosts
+}
+
+func (c *PxGridConsumer) ANCConfig() ANCConfig {
+	return c.ancConfig
+}
+
+func (c *PxGridConsumer) EndpointAsset() EndpointAsset {
+	return c.endpointAsset
+}
+
+func (c *PxGridConsumer) MDM() MDM {
+	return c.mdm
+}
+
+func (c *PxGridConsumer) ProfilerConfiguration() ProfilerConfiguration {
+	return c.profilerConfig
+}
+
+func (c *PxGridConsumer) PubSub() PubSub {
+	return c.pubsub
+}
+
+func (c *PxGridConsumer) RadiusFailure() RadiusFailure {
+	return c.radiusFailure
+}
+
+func (c *PxGridConsumer) SessionDirectory() SessionDirectory {
+	return c.sessionDirectory
+}
+
+func (c *PxGridConsumer) SystemHealth() SystemHealth {
+	return c.systemHealth
+}
+
+func (c *PxGridConsumer) TrustSecConfiguration() TrustSecConfiguration {
+	return c.trustsecConfig
+}
+
+func (c *PxGridConsumer) TrustSecSXP() TrustSecSXP {
+	return c.trustsecSxp
+}
+
+func (c *PxGridConsumer) TrustSec() TrustSec {
+	return c.trustsec
 }
