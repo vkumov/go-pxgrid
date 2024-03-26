@@ -19,7 +19,7 @@ type (
 	}
 
 	PubSubSubscriber interface {
-		Subscribe(ctx context.Context, topic string, node ServiceNode) (*stomp.Subscription, error)
+		Subscribe(ctx context.Context, picker ServiceNodePicker, topic string) (*stomp.Subscription, error)
 	}
 
 	PubSub interface {
@@ -39,6 +39,9 @@ type (
 
 		nodeName string
 		secret   string
+
+		readerBuffer []byte
+		writeBuffer  []byte
 	}
 
 	pxGridPubSub struct {
@@ -67,7 +70,12 @@ func (p *pxGridPubSub) WSURL() (string, error) {
 	return p.nodes.GetPropertyString("wsUrl")
 }
 
-func (p *pxGridPubSub) Subscribe(ctx context.Context, topic string, node ServiceNode) (*stomp.Subscription, error) {
+func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePicker, topic string) (*stomp.Subscription, error) {
+	node, err := p.nodes.PickNode(picker)
+	if err != nil {
+		return nil, err
+	}
+
 	ep, err := p.getEndpoint(node)
 	if err != nil {
 		return nil, err
@@ -147,7 +155,7 @@ func (e *PubSubEndpoint) connect(ctx context.Context) (err error) {
 		return err
 	}
 
-	e.stomp, err = stomp.Connect(e.ws.NetConn())
+	e.stomp, err = stomp.Connect(e)
 	if err != nil {
 		return errors.Join(err, e.ws.Close())
 	}
@@ -165,5 +173,35 @@ func (e *PubSubEndpoint) connect(ctx context.Context) (err error) {
 
 func (e *PubSubEndpoint) Disconnect() error {
 	e.ticker.Stop()
+	return e.ws.Close()
+}
+
+func (e *PubSubEndpoint) Read(p []byte) (int, error) {
+	// if we have no more data, read the next message from the websocket
+	if len(e.readerBuffer) == 0 {
+		_, msg, err := e.ws.ReadMessage()
+		if err != nil {
+			return 0, err
+		}
+		e.readerBuffer = msg
+	}
+
+	n := copy(p, e.readerBuffer)
+	e.readerBuffer = e.readerBuffer[n:]
+	return n, nil
+}
+
+func (e *PubSubEndpoint) Write(p []byte) (int, error) {
+	var err error
+	e.writeBuffer = append(e.writeBuffer, p...)
+	// if we reach a null byte or the entire message is a newline (heartbeat), send the message
+	if p[len(p)-1] == 0x00 || (len(e.writeBuffer) == 1 && len(p) == 1 && p[0] == 0x0a) {
+		err = e.ws.WriteMessage(1, e.writeBuffer)
+		e.writeBuffer = []byte{}
+	}
+	return len(p), err
+}
+
+func (e *PubSubEndpoint) Close() error {
 	return e.ws.Close()
 }

@@ -141,15 +141,10 @@ func (r *pxGridRadiusFailure) Subscribe() RadiusFailureSubscriber {
 }
 
 func (r *pxGridRadiusFailure) OnFailureTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[FailureTopicMessage], error) {
-	node, err := nodePicker(r.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := r.FailureTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[FailureTopicMessage](ctx, r.ctrl.PubSub(), node, topic)
+	return subscribe[FailureTopicMessage](ctx, r.ctrl.PubSub(), nodePicker, topic)
 }

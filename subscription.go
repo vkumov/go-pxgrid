@@ -70,8 +70,8 @@ func translator[T any](in chan *stomp.Message) chan *Message[T] {
 	return out
 }
 
-func subscribe[T any](ctx context.Context, s PubSubSubscriber, node ServiceNode, topic string) (*Subscription[T], error) {
-	sub, err := s.Subscribe(ctx, topic, node)
+func subscribe[T any](ctx context.Context, s PubSubSubscriber, picker ServiceNodePicker, topic string) (*Subscription[T], error) {
+	sub, err := s.Subscribe(ctx, picker, topic)
 	if err != nil {
 		return nil, err
 	}

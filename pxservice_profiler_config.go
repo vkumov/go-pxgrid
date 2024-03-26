@@ -91,15 +91,10 @@ func (s *pxGridProfilerConfiguration) Subscribe() ProfilerConfigurationSubscribe
 }
 
 func (s *pxGridProfilerConfiguration) OnProfileTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ProfilerTopicMessage], error) {
-	node, err := nodePicker(s.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := s.Topic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[ProfilerTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
+	return subscribe[ProfilerTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
 }

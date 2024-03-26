@@ -308,43 +308,28 @@ func (s *pxGridSessionDirectory) Subscribe() SessionDirectorySubscriber {
 }
 
 func (s *pxGridSessionDirectory) OnSessionTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error) {
-	node, err := nodePicker(s.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := s.SessionTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
+	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
 }
 
 func (s *pxGridSessionDirectory) OnSessionTopicAll(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error) {
-	node, err := nodePicker(s.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := s.SessionTopicAll()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
+	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
 }
 
 func (s *pxGridSessionDirectory) OnGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[GroupTopicMessage], error) {
-	node, err := nodePicker(s.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := s.GroupTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[GroupTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
+	return subscribe[GroupTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
 }

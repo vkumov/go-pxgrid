@@ -20,6 +20,7 @@ var (
 	ErrPropertyNotFound  = errors.New("property not found")
 	ErrPropertyNotString = errors.New("property is not a string")
 
+	ErrNoNodePicked = errors.New("no node picked")
 	ErrNoNodes      = errors.New("no nodes available")
 	ErrNodeNotFound = errors.New("node not found")
 )
@@ -98,5 +99,9 @@ func PredicateNodePicker(predicate func(ServiceNode) bool) ServiceNodePicker {
 }
 
 func (s ServiceNodeSlice) PickNode(picker ServiceNodePicker) (ServiceNode, error) {
+	if picker == nil {
+		return ServiceNode{}, ErrNoNodePicked
+	}
+
 	return picker(s)
 }

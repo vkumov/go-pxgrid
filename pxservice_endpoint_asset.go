@@ -79,15 +79,10 @@ func (e *pxGridEndpointAsset) Subscribe() EndpointAssetSubscriber {
 }
 
 func (e *pxGridEndpointAsset) OnAssetTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCAssetTopicMessage], error) {
-	node, err := nodePicker(e.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := e.AssetTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[ANCAssetTopicMessage](ctx, e.ctrl.PubSub(), node, topic)
+	return subscribe[ANCAssetTopicMessage](ctx, e.ctrl.PubSub(), nodePicker, topic)
 }

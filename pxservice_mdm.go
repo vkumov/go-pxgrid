@@ -177,15 +177,10 @@ func (s *pxGridMDM) Subscribe() MDMSubscriber {
 }
 
 func (s *pxGridMDM) OnEndpointTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[MDMEndpoint], error) {
-	node, err := nodePicker(s.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := s.EndpointTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[MDMEndpoint](ctx, s.ctrl.PubSub(), node, topic)
+	return subscribe[MDMEndpoint](ctx, s.ctrl.PubSub(), nodePicker, topic)
 }

@@ -3,6 +3,9 @@ package gopxgrid
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"log/slog"
+
+	"github.com/go-stomp/stomp/v3"
 )
 
 type INETFamilyStrategy int
@@ -55,4 +58,6 @@ type PxGridConfig struct {
 	Description string
 	TLS         TLSConfig
 	DNS         DNSConfig
+	Logger      stomp.Logger
+	LogLevel    slog.Level
 }

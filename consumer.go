@@ -27,13 +27,29 @@ var (
 	ErrNoHosts = fmt.Errorf("no hosts available")
 )
 
+func mergeWithDefaultConfig(cfg *PxGridConfig) *PxGridConfig {
+	if cfg == nil {
+		cfg = &PxGridConfig{}
+	}
+
+	if cfg.DNS.FamilyStrategy == IPUnknown {
+		cfg.DNS.FamilyStrategy = DefaultINETFamilyStrategy
+	}
+
+	if cfg.Logger == nil {
+		cfg.Logger = newInternalLogger(cfg.LogLevel)
+	}
+
+	return cfg
+}
+
 func NewPxGridConsumer(cfg *PxGridConfig) (*PxGridConsumer, error) {
 	if cfg == nil {
 		return nil, errors.New("invalid config")
 	}
 
 	c := &PxGridConsumer{
-		cfg: cfg,
+		cfg: mergeWithDefaultConfig(cfg),
 		svc: newTransport(cfg),
 	}
 

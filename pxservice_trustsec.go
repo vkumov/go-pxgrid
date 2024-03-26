@@ -84,15 +84,10 @@ func (t *pxGridTrustSec) Subscribe() TrustSecSubscriber {
 }
 
 func (t *pxGridTrustSec) OnPolicyDownloadTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[PolicyDownloadTopicMessage], error) {
-	node, err := nodePicker(t.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := t.PolicyDownloadTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[PolicyDownloadTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
+	return subscribe[PolicyDownloadTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
 }

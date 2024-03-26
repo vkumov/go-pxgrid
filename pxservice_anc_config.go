@@ -380,15 +380,10 @@ func (a *pxGridANC) Subscribe() ANCSubscriber {
 }
 
 func (a *pxGridANC) OnStatusTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCOperationStatus], error) {
-	node, err := nodePicker(a.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := a.StatusTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[ANCOperationStatus](ctx, a.ctrl.PubSub(), node, topic)
+	return subscribe[ANCOperationStatus](ctx, a.ctrl.PubSub(), nodePicker, topic)
 }

@@ -100,15 +100,10 @@ func (t *pxGridTrustSecSXP) Subscribe() TrustSecSXPSubscriber {
 }
 
 func (t *pxGridTrustSecSXP) OnBindingTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[TrustSecSXPBindingTopicMessage], error) {
-	node, err := nodePicker(t.nodes)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := t.BindingTopic()
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribe[TrustSecSXPBindingTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
+	return subscribe[TrustSecSXPBindingTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
 }
