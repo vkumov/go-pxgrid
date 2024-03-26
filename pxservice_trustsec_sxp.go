@@ -26,7 +26,7 @@ type (
 	}
 
 	TrustSecSXPSubscriber interface {
-		OnBindingTopic(ctx context.Context, node int) (*Subscription[TrustSecSXPBindingTopicMessage], error)
+		OnBindingTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[TrustSecSXPBindingTopicMessage], error)
 	}
 
 	TrustSecSXP interface {
@@ -99,9 +99,10 @@ func (t *pxGridTrustSecSXP) Subscribe() TrustSecSXPSubscriber {
 	return t
 }
 
-func (t *pxGridTrustSecSXP) OnBindingTopic(ctx context.Context, node int) (*Subscription[TrustSecSXPBindingTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSecSXP) OnBindingTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[TrustSecSXPBindingTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.BindingTopic()
@@ -109,5 +110,5 @@ func (t *pxGridTrustSecSXP) OnBindingTopic(ctx context.Context, node int) (*Subs
 		return nil, err
 	}
 
-	return subscribe[TrustSecSXPBindingTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[TrustSecSXPBindingTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }

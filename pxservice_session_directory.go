@@ -98,9 +98,9 @@ type (
 	}
 
 	SessionDirectorySubscriber interface {
-		OnSessionTopic(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error)
-		OnSessionTopicAll(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error)
-		OnGroupTopic(ctx context.Context, node int) (*Subscription[GroupTopicMessage], error)
+		OnSessionTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error)
+		OnSessionTopicAll(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error)
+		OnGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[GroupTopicMessage], error)
 	}
 
 	SessionDirectory interface {
@@ -307,9 +307,10 @@ func (s *pxGridSessionDirectory) Subscribe() SessionDirectorySubscriber {
 	return s
 }
 
-func (s *pxGridSessionDirectory) OnSessionTopic(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error) {
-	if node < 0 || node >= len(s.nodes) {
-		return nil, ErrNodeNotFound
+func (s *pxGridSessionDirectory) OnSessionTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error) {
+	node, err := nodePicker(s.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := s.SessionTopic()
@@ -317,12 +318,13 @@ func (s *pxGridSessionDirectory) OnSessionTopic(ctx context.Context, node int) (
 		return nil, err
 	}
 
-	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
+	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
 }
 
-func (s *pxGridSessionDirectory) OnSessionTopicAll(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error) {
-	if node < 0 || node >= len(s.nodes) {
-		return nil, ErrNodeNotFound
+func (s *pxGridSessionDirectory) OnSessionTopicAll(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error) {
+	node, err := nodePicker(s.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := s.SessionTopicAll()
@@ -330,12 +332,13 @@ func (s *pxGridSessionDirectory) OnSessionTopicAll(ctx context.Context, node int
 		return nil, err
 	}
 
-	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
+	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
 }
 
-func (s *pxGridSessionDirectory) OnGroupTopic(ctx context.Context, node int) (*Subscription[GroupTopicMessage], error) {
-	if node < 0 || node >= len(s.nodes) {
-		return nil, ErrNodeNotFound
+func (s *pxGridSessionDirectory) OnGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[GroupTopicMessage], error) {
+	node, err := nodePicker(s.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := s.GroupTopic()
@@ -343,5 +346,5 @@ func (s *pxGridSessionDirectory) OnGroupTopic(ctx context.Context, node int) (*S
 		return nil, err
 	}
 
-	return subscribe[GroupTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
+	return subscribe[GroupTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
 }

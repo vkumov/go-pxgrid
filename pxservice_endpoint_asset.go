@@ -37,7 +37,7 @@ type (
 	}
 
 	EndpointAssetSubscriber interface {
-		OnAssetTopic(ctx context.Context, node int) (*Subscription[ANCAssetTopicMessage], error)
+		OnAssetTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCAssetTopicMessage], error)
 	}
 
 	EndpointAsset interface {
@@ -78,9 +78,10 @@ func (e *pxGridEndpointAsset) Subscribe() EndpointAssetSubscriber {
 	return e
 }
 
-func (e *pxGridEndpointAsset) OnAssetTopic(ctx context.Context, node int) (*Subscription[ANCAssetTopicMessage], error) {
-	if node < 0 || node >= len(e.nodes) {
-		return nil, ErrNodeNotFound
+func (e *pxGridEndpointAsset) OnAssetTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCAssetTopicMessage], error) {
+	node, err := nodePicker(e.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := e.AssetTopic()
@@ -88,5 +89,5 @@ func (e *pxGridEndpointAsset) OnAssetTopic(ctx context.Context, node int) (*Subs
 		return nil, err
 	}
 
-	return subscribe[ANCAssetTopicMessage](ctx, e.ctrl.PubSub(), e.nodes[node], topic)
+	return subscribe[ANCAssetTopicMessage](ctx, e.ctrl.PubSub(), node, topic)
 }

@@ -75,7 +75,7 @@ type (
 	}
 
 	ANCSubscriber interface {
-		OnStatusTopic(ctx context.Context, node int) (*Subscription[ANCOperationStatus], error)
+		OnStatusTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCOperationStatus], error)
 	}
 
 	ANCConfig interface {
@@ -379,9 +379,10 @@ func (a *pxGridANC) Subscribe() ANCSubscriber {
 	return a
 }
 
-func (a *pxGridANC) OnStatusTopic(ctx context.Context, node int) (*Subscription[ANCOperationStatus], error) {
-	if node < 0 || node >= len(a.nodes) {
-		return nil, ErrNodeNotFound
+func (a *pxGridANC) OnStatusTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCOperationStatus], error) {
+	node, err := nodePicker(a.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := a.StatusTopic()
@@ -389,5 +390,5 @@ func (a *pxGridANC) OnStatusTopic(ctx context.Context, node int) (*Subscription[
 		return nil, err
 	}
 
-	return subscribe[ANCOperationStatus](ctx, a.ctrl.PubSub(), a.nodes[node], topic)
+	return subscribe[ANCOperationStatus](ctx, a.ctrl.PubSub(), node, topic)
 }

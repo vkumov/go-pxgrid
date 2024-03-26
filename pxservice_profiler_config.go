@@ -24,7 +24,7 @@ type (
 	}
 
 	ProfilerConfigurationSubscriber interface {
-		OnProfileTopic(ctx context.Context, node int) (*Subscription[ProfilerTopicMessage], error)
+		OnProfileTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ProfilerTopicMessage], error)
 	}
 
 	ProfilerConfiguration interface {
@@ -90,9 +90,10 @@ func (s *pxGridProfilerConfiguration) Subscribe() ProfilerConfigurationSubscribe
 	return s
 }
 
-func (s *pxGridProfilerConfiguration) OnProfileTopic(ctx context.Context, node int) (*Subscription[ProfilerTopicMessage], error) {
-	if node < 0 || node >= len(s.nodes) {
-		return nil, ErrNodeNotFound
+func (s *pxGridProfilerConfiguration) OnProfileTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ProfilerTopicMessage], error) {
+	node, err := nodePicker(s.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := s.Topic()
@@ -100,5 +101,5 @@ func (s *pxGridProfilerConfiguration) OnProfileTopic(ctx context.Context, node i
 		return nil, err
 	}
 
-	return subscribe[ProfilerTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
+	return subscribe[ProfilerTopicMessage](ctx, s.ctrl.PubSub(), node, topic)
 }

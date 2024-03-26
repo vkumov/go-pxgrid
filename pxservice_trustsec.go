@@ -37,7 +37,7 @@ type (
 	}
 
 	TrustSecSubscriber interface {
-		OnPolicyDownloadTopic(ctx context.Context, node int) (*Subscription[PolicyDownloadTopicMessage], error)
+		OnPolicyDownloadTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[PolicyDownloadTopicMessage], error)
 	}
 
 	TrustSec interface {
@@ -83,9 +83,10 @@ func (t *pxGridTrustSec) Subscribe() TrustSecSubscriber {
 	return t
 }
 
-func (t *pxGridTrustSec) OnPolicyDownloadTopic(ctx context.Context, node int) (*Subscription[PolicyDownloadTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSec) OnPolicyDownloadTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[PolicyDownloadTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.PolicyDownloadTopic()
@@ -93,5 +94,5 @@ func (t *pxGridTrustSec) OnPolicyDownloadTopic(ctx context.Context, node int) (*
 		return nil, err
 	}
 
-	return subscribe[PolicyDownloadTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[PolicyDownloadTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }

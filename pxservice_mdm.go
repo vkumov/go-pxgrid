@@ -36,7 +36,7 @@ type (
 	}
 
 	MDMSubscriber interface {
-		OnEndpointTopic(ctx context.Context, node int) (*Subscription[MDMEndpoint], error)
+		OnEndpointTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[MDMEndpoint], error)
 	}
 
 	MDM interface {
@@ -176,9 +176,10 @@ func (s *pxGridMDM) Subscribe() MDMSubscriber {
 	return s
 }
 
-func (s *pxGridMDM) OnEndpointTopic(ctx context.Context, node int) (*Subscription[MDMEndpoint], error) {
-	if node < 0 || node >= len(s.nodes) {
-		return nil, ErrNodeNotFound
+func (s *pxGridMDM) OnEndpointTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[MDMEndpoint], error) {
+	node, err := nodePicker(s.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := s.EndpointTopic()
@@ -186,5 +187,5 @@ func (s *pxGridMDM) OnEndpointTopic(ctx context.Context, node int) (*Subscriptio
 		return nil, err
 	}
 
-	return subscribe[MDMEndpoint](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
+	return subscribe[MDMEndpoint](ctx, s.ctrl.PubSub(), node, topic)
 }

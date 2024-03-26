@@ -59,7 +59,7 @@ type (
 	}
 
 	RadiusFailureSubscriber interface {
-		OnFailureTopic(ctx context.Context, node int) (*Subscription[FailureTopicMessage], error)
+		OnFailureTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[FailureTopicMessage], error)
 	}
 
 	RadiusFailure interface {
@@ -140,9 +140,10 @@ func (r *pxGridRadiusFailure) Subscribe() RadiusFailureSubscriber {
 	return r
 }
 
-func (r *pxGridRadiusFailure) OnFailureTopic(ctx context.Context, node int) (*Subscription[FailureTopicMessage], error) {
-	if node < 0 || node >= len(r.nodes) {
-		return nil, ErrNodeNotFound
+func (r *pxGridRadiusFailure) OnFailureTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[FailureTopicMessage], error) {
+	node, err := nodePicker(r.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := r.FailureTopic()
@@ -150,5 +151,5 @@ func (r *pxGridRadiusFailure) OnFailureTopic(ctx context.Context, node int) (*Su
 		return nil, err
 	}
 
-	return subscribe[FailureTopicMessage](ctx, r.ctrl.PubSub(), r.nodes[node], topic)
+	return subscribe[FailureTopicMessage](ctx, r.ctrl.PubSub(), node, topic)
 }

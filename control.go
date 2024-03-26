@@ -12,10 +12,6 @@ var (
 	ErrCreateForbidden      = errors.New("create account forbidden")
 	ErrCreateConflict       = errors.New("create account conflict")
 	ErrActivateUnauthorized = errors.New("activate account unauthorized")
-
-	ErrNoNodes           = errors.New("no nodes available")
-	ErrPropertyNotFound  = errors.New("property not found")
-	ErrPropertyNotString = errors.New("property is not a string")
 )
 
 type (
@@ -28,15 +24,6 @@ type (
 		AccountState string `json:"accountState"`
 		Version      string `json:"version"`
 	}
-
-	ServiceNode struct {
-		Name       string                 `json:"name"`
-		NodeName   string                 `json:"nodeName"`
-		Properties map[string]interface{} `json:"properties"`
-		Secret     string                 `json:"-"`
-	}
-
-	ServiceNodeSlice []ServiceNode
 
 	ServiceLookupResponse struct {
 		Services []ServiceNode `json:"services"`
@@ -142,31 +129,4 @@ func (c *PxGridConsumer) DialContext(ctx context.Context, network, addr string) 
 
 func (c *PxGridConsumer) ClientTLSConfig() *tls.Config {
 	return c.svc.ClientTLSConfig()
-}
-
-func (s ServiceNodeSlice) GetProperty(name string) (any, error) {
-	if len(s) == 0 {
-		return nil, ErrNoNodes
-	}
-
-	for _, svc := range s {
-		if val, ok := svc.Properties[name]; ok {
-			return val, nil
-		}
-	}
-
-	return nil, ErrPropertyNotFound
-}
-
-func (s ServiceNodeSlice) GetPropertyString(name string) (string, error) {
-	val, err := s.GetProperty(name)
-	if err != nil {
-		return "", err
-	}
-
-	if str, ok := val.(string); ok {
-		return str, nil
-	}
-
-	return "", ErrPropertyNotString
 }

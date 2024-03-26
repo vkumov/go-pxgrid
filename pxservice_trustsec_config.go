@@ -134,11 +134,11 @@ type (
 	}
 
 	TrustSecConfigurationSubscriber interface {
-		OnSecurityGroupTopic(ctx context.Context, node int) (*Subscription[SecurityGroupTopicMessage], error)
-		OnSecurityGroupACLTopic(ctx context.Context, node int) (*Subscription[SecurityGroupACLTopicMessage], error)
-		OnSecurityGroupVNVlanTopic(ctx context.Context, node int) (*Subscription[SecurityGroupVNVlanTopicMessage], error)
-		OnVirtualNetworkTopic(ctx context.Context, node int) (*Subscription[VirtualNetworkTopicMessage], error)
-		OnEgressPolicyTopic(ctx context.Context, node int) (*Subscription[EgressPolicyTopicMessage], error)
+		OnSecurityGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupTopicMessage], error)
+		OnSecurityGroupACLTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupACLTopicMessage], error)
+		OnSecurityGroupVNVlanTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupVNVlanTopicMessage], error)
+		OnVirtualNetworkTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[VirtualNetworkTopicMessage], error)
+		OnEgressPolicyTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[EgressPolicyTopicMessage], error)
 	}
 
 	TrustSecConfiguration interface {
@@ -397,9 +397,10 @@ func (t *pxGridTrustSecConfiguration) Subscribe() TrustSecConfigurationSubscribe
 	return t
 }
 
-func (t *pxGridTrustSecConfiguration) OnSecurityGroupTopic(ctx context.Context, node int) (*Subscription[SecurityGroupTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.SecurityGroupTopic()
@@ -407,12 +408,13 @@ func (t *pxGridTrustSecConfiguration) OnSecurityGroupTopic(ctx context.Context, 
 		return nil, err
 	}
 
-	return subscribe[SecurityGroupTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[SecurityGroupTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }
 
-func (t *pxGridTrustSecConfiguration) OnSecurityGroupACLTopic(ctx context.Context, node int) (*Subscription[SecurityGroupACLTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupACLTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupACLTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.SecurityGroupACLTopic()
@@ -420,12 +422,13 @@ func (t *pxGridTrustSecConfiguration) OnSecurityGroupACLTopic(ctx context.Contex
 		return nil, err
 	}
 
-	return subscribe[SecurityGroupACLTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[SecurityGroupACLTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }
 
-func (t *pxGridTrustSecConfiguration) OnSecurityGroupVNVlanTopic(ctx context.Context, node int) (*Subscription[SecurityGroupVNVlanTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupVNVlanTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupVNVlanTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.SecurityGroupVNVlanTopic()
@@ -433,12 +436,13 @@ func (t *pxGridTrustSecConfiguration) OnSecurityGroupVNVlanTopic(ctx context.Con
 		return nil, err
 	}
 
-	return subscribe[SecurityGroupVNVlanTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[SecurityGroupVNVlanTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }
 
-func (t *pxGridTrustSecConfiguration) OnVirtualNetworkTopic(ctx context.Context, node int) (*Subscription[VirtualNetworkTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSecConfiguration) OnVirtualNetworkTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[VirtualNetworkTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.VirtualNetworkTopic()
@@ -446,12 +450,13 @@ func (t *pxGridTrustSecConfiguration) OnVirtualNetworkTopic(ctx context.Context,
 		return nil, err
 	}
 
-	return subscribe[VirtualNetworkTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[VirtualNetworkTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }
 
-func (t *pxGridTrustSecConfiguration) OnEgressPolicyTopic(ctx context.Context, node int) (*Subscription[EgressPolicyTopicMessage], error) {
-	if node < 0 || node >= len(t.nodes) {
-		return nil, ErrNodeNotFound
+func (t *pxGridTrustSecConfiguration) OnEgressPolicyTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[EgressPolicyTopicMessage], error) {
+	node, err := nodePicker(t.nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	topic, err := t.EgressPolicyTopic()
@@ -459,5 +464,5 @@ func (t *pxGridTrustSecConfiguration) OnEgressPolicyTopic(ctx context.Context, n
 		return nil, err
 	}
 
-	return subscribe[EgressPolicyTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+	return subscribe[EgressPolicyTopicMessage](ctx, t.ctrl.PubSub(), node, topic)
 }

@@ -7,7 +7,6 @@ import (
 
 var (
 	ErrInvalidInput = fmt.Errorf("invalid input")
-	ErrNodeNotFound = fmt.Errorf("node not found")
 )
 
 type OperationType string

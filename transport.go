@@ -13,7 +13,7 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-type service struct {
+type transport struct {
 	client   *resty.Client
 	tls      *TLSConfig
 	dns      *DNSConfig
@@ -52,8 +52,8 @@ func tlsCfg(cfg *TLSConfig) *TLSConfig {
 	return cfg
 }
 
-func newService(cfg *PxGridConfig) *service {
-	s := &service{
+func newTransport(cfg *PxGridConfig) *transport {
+	s := &transport{
 		client: resty.New(),
 		tls:    tlsCfg(&cfg.TLS),
 		dns:    dnsCfg(&cfg.DNS),
@@ -84,7 +84,7 @@ func newService(cfg *PxGridConfig) *service {
 	return s
 }
 
-func (s *service) getOneIPAddr(addrs []net.IPAddr, err error) (net.IPAddr, error) {
+func (s *transport) getOneIPAddr(addrs []net.IPAddr, err error) (net.IPAddr, error) {
 	if err != nil {
 		return net.IPAddr{}, err
 	}
@@ -137,7 +137,7 @@ func (s *service) getOneIPAddr(addrs []net.IPAddr, err error) (net.IPAddr, error
 	return net.IPAddr{}, &net.AddrError{Err: "unknown strategy", Addr: ""}
 }
 
-func (s *service) ResolveHost(ctx context.Context, host string) (net.IPAddr, error) {
+func (s *transport) ResolveHost(ctx context.Context, host string) (net.IPAddr, error) {
 	if s.resolver == nil {
 		return s.getOneIPAddr(net.DefaultResolver.LookupIPAddr(ctx, host))
 	}
@@ -145,13 +145,13 @@ func (s *service) ResolveHost(ctx context.Context, host string) (net.IPAddr, err
 	return s.getOneIPAddr(s.resolver.LookupIPAddr(ctx, host))
 }
 
-func (s *service) UpdateClientCertificate(cert *tls.Certificate) {
+func (s *transport) UpdateClientCertificate(cert *tls.Certificate) {
 	s.tls.ClientCertificate = cert
 }
 
 type (
 	Request struct {
-		s       *service
+		s       *transport
 		ctx     context.Context
 		auth    *AuthConfig
 		rootCAs *x509.CertPool
@@ -281,14 +281,14 @@ func (r *Request) Post(u string, payload interface{}) (*Response, error) {
 	return &done, nil
 }
 
-func (s *service) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+func (s *transport) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	dialer := &net.Dialer{
 		Resolver: s.resolver,
 	}
 	return dialer.DialContext(ctx, network, addr)
 }
 
-func (s *service) ClientTLSConfig() *tls.Config {
+func (s *transport) ClientTLSConfig() *tls.Config {
 	s.tlsMutex.RLock()
 	defer s.tlsMutex.RUnlock()
 
@@ -306,7 +306,7 @@ func (s *service) ClientTLSConfig() *tls.Config {
 	return tls
 }
 
-func (s *service) NewRequest(ctx context.Context) *Request {
+func (s *transport) NewRequest(ctx context.Context) *Request {
 	clonedAuth := s.auth
 	return &Request{
 		s:       s,

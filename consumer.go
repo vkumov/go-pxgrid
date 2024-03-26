@@ -8,7 +8,7 @@ import (
 
 type PxGridConsumer struct {
 	cfg *PxGridConfig
-	svc *service
+	svc *transport
 
 	ancConfig        ANCConfig
 	endpointAsset    EndpointAsset
@@ -34,7 +34,7 @@ func NewPxGridConsumer(cfg *PxGridConfig) (*PxGridConsumer, error) {
 
 	c := &PxGridConsumer{
 		cfg: cfg,
-		svc: newService(cfg),
+		svc: newTransport(cfg),
 	}
 
 	c.ancConfig = NewPxGridANCConfig(c)
