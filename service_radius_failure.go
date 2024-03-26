@@ -1,7 +1,7 @@
 package gopxgrid
 
 import (
-	"errors"
+	"context"
 	"fmt"
 )
 
@@ -59,7 +59,7 @@ type (
 	}
 
 	RadiusFailureSubscriber interface {
-		OnFailureTopic() (*Subscription[FailureTopicMessage], error)
+		OnFailureTopic(ctx context.Context, node int) (*Subscription[FailureTopicMessage], error)
 	}
 
 	RadiusFailure interface {
@@ -78,7 +78,7 @@ type (
 	}
 )
 
-func NewPxGridRadiusFailure(ctrl Controller) RadiusFailure {
+func NewPxGridRadiusFailure(ctrl *PxGridConsumer) RadiusFailure {
 	return &pxGridRadiusFailure{
 		pxGridService{
 			name: "com.cisco.ise.radius",
@@ -140,6 +140,15 @@ func (r *pxGridRadiusFailure) Subscribe() RadiusFailureSubscriber {
 	return r
 }
 
-func (r *pxGridRadiusFailure) OnFailureTopic() (*Subscription[FailureTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (r *pxGridRadiusFailure) OnFailureTopic(ctx context.Context, node int) (*Subscription[FailureTopicMessage], error) {
+	if node < 0 || node >= len(r.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := r.FailureTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[FailureTopicMessage](ctx, r.ctrl.PubSub(), r.nodes[node], topic)
 }

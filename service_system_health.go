@@ -42,7 +42,7 @@ type (
 	}
 )
 
-func NewPxGridSystemHealth(ctrl Controller) SystemHealth {
+func NewPxGridSystemHealth(ctrl *PxGridConsumer) SystemHealth {
 	return &pxGridSystemHealth{
 		pxGridService{
 			name: "com.cisco.ise.system",

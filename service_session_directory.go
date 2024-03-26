@@ -1,7 +1,7 @@
 package gopxgrid
 
 import (
-	"errors"
+	"context"
 	"fmt"
 )
 
@@ -98,9 +98,9 @@ type (
 	}
 
 	SessionDirectorySubscriber interface {
-		OnSessionTopic() (*Subscription[SessionTopicMessage], error)
-		OnSessionTopicAll() (*Subscription[SessionTopicMessage], error)
-		OnGroupTopic() (*Subscription[GroupTopicMessage], error)
+		OnSessionTopic(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error)
+		OnSessionTopicAll(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error)
+		OnGroupTopic(ctx context.Context, node int) (*Subscription[GroupTopicMessage], error)
 	}
 
 	SessionDirectory interface {
@@ -136,7 +136,7 @@ const (
 	GroupTypeInterestingActiveDirectory GroupType = "INTERESTING_ACTIVE_DIRECTORY"
 )
 
-func NewPxGridSessionDirectory(ctrl Controller) SessionDirectory {
+func NewPxGridSessionDirectory(ctrl *PxGridConsumer) SessionDirectory {
 	return &pxGridSessionDirectory{
 		pxGridService{
 			name: "com.cisco.ise.session",
@@ -307,14 +307,41 @@ func (s *pxGridSessionDirectory) Subscribe() SessionDirectorySubscriber {
 	return s
 }
 
-func (s *pxGridSessionDirectory) OnSessionTopic() (*Subscription[SessionTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (s *pxGridSessionDirectory) OnSessionTopic(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error) {
+	if node < 0 || node >= len(s.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := s.SessionTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
 }
 
-func (s *pxGridSessionDirectory) OnSessionTopicAll() (*Subscription[SessionTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (s *pxGridSessionDirectory) OnSessionTopicAll(ctx context.Context, node int) (*Subscription[SessionTopicMessage], error) {
+	if node < 0 || node >= len(s.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := s.SessionTopicAll()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
 }
 
-func (s *pxGridSessionDirectory) OnGroupTopic() (*Subscription[GroupTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (s *pxGridSessionDirectory) OnGroupTopic(ctx context.Context, node int) (*Subscription[GroupTopicMessage], error) {
+	if node < 0 || node >= len(s.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := s.GroupTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[GroupTopicMessage](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
 }

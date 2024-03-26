@@ -1,6 +1,9 @@
 package gopxgrid
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type (
 	TrustSecConfigurationPropsProvider interface {
@@ -83,6 +86,61 @@ type (
 		DeletedEgressPolicies []EgressPolicy `json:"deletedEgressPolicies"`
 	}
 
+	SecurityGroupTopicMessage struct {
+		Sequence      int           `json:"sequence"`
+		OperationType OperationType `json:"operation"`
+		SecurityGroup SecurityGroup `json:"securityGroup"`
+	}
+
+	SecurityGroupACLTopicMessage struct {
+		ID              string `json:"id"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
+		IPVersion       string `json:"ipVersion"`
+		ACL             string `json:"acl"`
+		ModelledContent any    `json:"modelledContent"`
+		GenerationID    string `json:"generationId"`
+		IsReadOnly      bool   `json:"isReadOnly"`
+		Sequence        int    `json:"sequence"`
+		Deleted         bool   `json:"deleted"`
+		Timestamp       string `json:"timestamp"`
+	}
+
+	SecurityGroupVNVlanTopicMessage any
+
+	VirtualNetworkTopicMessage struct {
+		ID                   string `json:"id"`
+		Name                 string `json:"name"`
+		AdditionalAttributes string `json:"additionalAttributes"`
+		Sequence             int    `json:"sequence"`
+		Deleted              bool   `json:"deleted"`
+		Timestamp            string `json:"timestamp"`
+	}
+
+	EgressPolicyTopicMessage struct {
+		ID                 string   `json:"id"`
+		Name               string   `json:"name"`
+		Description        string   `json:"description"`
+		SourceSGTID        string   `json:"sourceSgtId"`
+		SourceSGTName      string   `json:"sourceSgtName"`
+		DestinationSGTID   string   `json:"destinationSgtId"`
+		DestinationSGTName string   `json:"destinationSgtName"`
+		MatrixCellStatus   string   `json:"matrixCellStatus"`
+		SGACLIDs           []string `json:"sgaclIds"`
+		DefaultRule        string   `json:"defaultRule"`
+		Sequence           int      `json:"sequence"`
+		Deleted            bool     `json:"deleted"`
+		Timestamp          string   `json:"timestamp"`
+	}
+
+	TrustSecConfigurationSubscriber interface {
+		OnSecurityGroupTopic(ctx context.Context, node int) (*Subscription[SecurityGroupTopicMessage], error)
+		OnSecurityGroupACLTopic(ctx context.Context, node int) (*Subscription[SecurityGroupACLTopicMessage], error)
+		OnSecurityGroupVNVlanTopic(ctx context.Context, node int) (*Subscription[SecurityGroupVNVlanTopicMessage], error)
+		OnVirtualNetworkTopic(ctx context.Context, node int) (*Subscription[VirtualNetworkTopicMessage], error)
+		OnEgressPolicyTopic(ctx context.Context, node int) (*Subscription[EgressPolicyTopicMessage], error)
+	}
+
 	TrustSecConfiguration interface {
 		PxGridService
 
@@ -92,6 +150,8 @@ type (
 		GetEgressPolicies(filters ...TrustSecEgressPoliciesRequestFilter) CallFinalizer[*GetEgressPoliciesResponse]
 		GetEgressMatrices() CallFinalizer[*[]EgressMatrix]
 
+		Subscribe() TrustSecConfigurationSubscriber
+
 		Properties() TrustSecConfigurationPropsProvider
 	}
 
@@ -100,7 +160,7 @@ type (
 	}
 )
 
-func NewPxGridTrustSecConfiguration(ctrl Controller) TrustSecConfiguration {
+func NewPxGridTrustSecConfiguration(ctrl *PxGridConsumer) TrustSecConfiguration {
 	return &pxGridTrustSecConfiguration{
 		pxGridService{
 			name: "com.cisco.ise.config.trustsec",
@@ -331,4 +391,73 @@ func (t *pxGridTrustSecConfiguration) GetEgressMatrices() CallFinalizer[*[]Egres
 			return &r.Result.(*response).EgressMatrices, nil
 		},
 	)
+}
+
+func (t *pxGridTrustSecConfiguration) Subscribe() TrustSecConfigurationSubscriber {
+	return t
+}
+
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupTopic(ctx context.Context, node int) (*Subscription[SecurityGroupTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.SecurityGroupTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[SecurityGroupTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+}
+
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupACLTopic(ctx context.Context, node int) (*Subscription[SecurityGroupACLTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.SecurityGroupACLTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[SecurityGroupACLTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+}
+
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupVNVlanTopic(ctx context.Context, node int) (*Subscription[SecurityGroupVNVlanTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.SecurityGroupVNVlanTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[SecurityGroupVNVlanTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+}
+
+func (t *pxGridTrustSecConfiguration) OnVirtualNetworkTopic(ctx context.Context, node int) (*Subscription[VirtualNetworkTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.VirtualNetworkTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[VirtualNetworkTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
+}
+
+func (t *pxGridTrustSecConfiguration) OnEgressPolicyTopic(ctx context.Context, node int) (*Subscription[EgressPolicyTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.EgressPolicyTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[EgressPolicyTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
 }

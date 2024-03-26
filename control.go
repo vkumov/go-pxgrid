@@ -48,9 +48,6 @@ type (
 		AccountActivate(ctx context.Context) error
 		ServiceLookup(ctx context.Context, svc string) (ServiceLookupResponse, error)
 		AccessSecret(ctx context.Context, peerNodeName string) (string, error)
-
-		DialContext(ctx context.Context, network, addr string) (net.Conn, error)
-		ClientTLSConfig() *tls.Config
 	}
 )
 

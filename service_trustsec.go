@@ -1,6 +1,8 @@
 package gopxgrid
 
-import "errors"
+import (
+	"context"
+)
 
 type (
 	Policy struct {
@@ -35,7 +37,7 @@ type (
 	}
 
 	TrustSecSubscriber interface {
-		OnPolicyDownloadTopic() (*Subscription[PolicyDownloadTopicMessage], error)
+		OnPolicyDownloadTopic(ctx context.Context, node int) (*Subscription[PolicyDownloadTopicMessage], error)
 	}
 
 	TrustSec interface {
@@ -56,7 +58,7 @@ const (
 	PolicyDownloadStatusFailure PolicyDownloadStatus = "FAILURE"
 )
 
-func NewPxGridTrustSec(ctrl Controller) TrustSec {
+func NewPxGridTrustSec(ctrl *PxGridConsumer) TrustSec {
 	return &pxGridTrustSec{
 		pxGridService{
 			name: "com.cisco.ise.trustsec",
@@ -81,6 +83,15 @@ func (t *pxGridTrustSec) Subscribe() TrustSecSubscriber {
 	return t
 }
 
-func (t *pxGridTrustSec) OnPolicyDownloadTopic() (*Subscription[PolicyDownloadTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (t *pxGridTrustSec) OnPolicyDownloadTopic(ctx context.Context, node int) (*Subscription[PolicyDownloadTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.PolicyDownloadTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[PolicyDownloadTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
 }

@@ -1,7 +1,7 @@
 package gopxgrid
 
 import (
-	"errors"
+	"context"
 	"fmt"
 )
 
@@ -75,7 +75,7 @@ type (
 	}
 
 	ANCSubscriber interface {
-		OnStatusTopic() (*Subscription[ANCOperationStatus], error)
+		OnStatusTopic(ctx context.Context, node int) (*Subscription[ANCOperationStatus], error)
 	}
 
 	ANCConfig interface {
@@ -110,7 +110,7 @@ type (
 	}
 )
 
-func NewPxGridANCConfig(ctrl Controller) ANCConfig {
+func NewPxGridANCConfig(ctrl *PxGridConsumer) ANCConfig {
 	return &pxGridANC{
 		pxGridService: pxGridService{
 			name: "com.cisco.ise.config.anc",
@@ -379,6 +379,15 @@ func (a *pxGridANC) Subscribe() ANCSubscriber {
 	return a
 }
 
-func (a *pxGridANC) OnStatusTopic() (*Subscription[ANCOperationStatus], error) {
-	return nil, errors.New("not implemented")
+func (a *pxGridANC) OnStatusTopic(ctx context.Context, node int) (*Subscription[ANCOperationStatus], error) {
+	if node < 0 || node >= len(a.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := a.StatusTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[ANCOperationStatus](ctx, a.ctrl.PubSub(), a.nodes[node], topic)
 }

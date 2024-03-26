@@ -7,6 +7,7 @@ import (
 
 var (
 	ErrInvalidInput = fmt.Errorf("invalid input")
+	ErrNodeNotFound = fmt.Errorf("node not found")
 )
 
 type OperationType string
@@ -36,7 +37,7 @@ var _ PxGridService = (*pxGridService)(nil)
 type pxGridService struct {
 	name  string
 	nodes ServiceNodeSlice
-	ctrl  Controller
+	ctrl  *PxGridConsumer
 }
 
 // Name returns the name of the service

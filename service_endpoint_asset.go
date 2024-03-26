@@ -1,6 +1,8 @@
 package gopxgrid
 
-import "errors"
+import (
+	"context"
+)
 
 type (
 	ANCKeyValue struct {
@@ -35,7 +37,7 @@ type (
 	}
 
 	EndpointAssetSubscriber interface {
-		OnAssetTopic() (*Subscription[ANCAssetTopicMessage], error)
+		OnAssetTopic(ctx context.Context, node int) (*Subscription[ANCAssetTopicMessage], error)
 	}
 
 	EndpointAsset interface {
@@ -51,7 +53,7 @@ type (
 	}
 )
 
-func NewPxGridEndpointAsset(ctrl Controller) EndpointAsset {
+func NewPxGridEndpointAsset(ctrl *PxGridConsumer) EndpointAsset {
 	return &pxGridEndpointAsset{
 		pxGridService{
 			name: "com.cisco.endpoint.asset",
@@ -76,6 +78,15 @@ func (e *pxGridEndpointAsset) Subscribe() EndpointAssetSubscriber {
 	return e
 }
 
-func (e *pxGridEndpointAsset) OnAssetTopic() (*Subscription[ANCAssetTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (e *pxGridEndpointAsset) OnAssetTopic(ctx context.Context, node int) (*Subscription[ANCAssetTopicMessage], error) {
+	if node < 0 || node >= len(e.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := e.AssetTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[ANCAssetTopicMessage](ctx, e.ctrl.PubSub(), e.nodes[node], topic)
 }

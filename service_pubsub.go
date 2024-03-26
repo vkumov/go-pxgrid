@@ -18,10 +18,14 @@ type (
 		WSURL() (string, error)
 	}
 
+	PubSubSubscriber interface {
+		Subscribe(ctx context.Context, topic string, node ServiceNode) (*stomp.Subscription, error)
+	}
+
 	PubSub interface {
 		PxGridService
 
-		Subscribe(ctx context.Context, topic string, node ServiceNode) (*stomp.Subscription, error)
+		PubSubSubscriber
 
 		Properties() PubSubPropsProvider
 	}
@@ -45,7 +49,7 @@ type (
 	}
 )
 
-func NewPxGridPubSub(ctrl Controller) PubSub {
+func NewPxGridPubSub(ctrl *PxGridConsumer) PubSub {
 	return &pxGridPubSub{
 		pxGridService: pxGridService{
 			name: "com.cisco.ise.pubsub",

@@ -1,7 +1,7 @@
 package gopxgrid
 
 import (
-	"errors"
+	"context"
 	"fmt"
 )
 
@@ -26,7 +26,7 @@ type (
 	}
 
 	TrustSecSXPSubscriber interface {
-		OnBindingTopic() (*Subscription[TrustSecSXPBindingTopicMessage], error)
+		OnBindingTopic(ctx context.Context, node int) (*Subscription[TrustSecSXPBindingTopicMessage], error)
 	}
 
 	TrustSecSXP interface {
@@ -44,7 +44,7 @@ type (
 	}
 )
 
-func NewPxGridTrustSecSXP(ctrl Controller) TrustSecSXP {
+func NewPxGridTrustSecSXP(ctrl *PxGridConsumer) TrustSecSXP {
 	return &pxGridTrustSecSXP{
 		pxGridService{
 			name: "com.cisco.ise.sxp",
@@ -99,6 +99,15 @@ func (t *pxGridTrustSecSXP) Subscribe() TrustSecSXPSubscriber {
 	return t
 }
 
-func (t *pxGridTrustSecSXP) OnBindingTopic() (*Subscription[TrustSecSXPBindingTopicMessage], error) {
-	return nil, errors.New("not implemented")
+func (t *pxGridTrustSecSXP) OnBindingTopic(ctx context.Context, node int) (*Subscription[TrustSecSXPBindingTopicMessage], error) {
+	if node < 0 || node >= len(t.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := t.BindingTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[TrustSecSXPBindingTopicMessage](ctx, t.ctrl.PubSub(), t.nodes[node], topic)
 }

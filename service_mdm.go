@@ -1,7 +1,7 @@
 package gopxgrid
 
 import (
-	"errors"
+	"context"
 	"fmt"
 )
 
@@ -36,7 +36,7 @@ type (
 	}
 
 	MDMSubscriber interface {
-		OnEndpointTopic() (*Subscription[MDMEndpoint], error)
+		OnEndpointTopic(ctx context.Context, node int) (*Subscription[MDMEndpoint], error)
 	}
 
 	MDM interface {
@@ -67,7 +67,7 @@ const (
 	MDMOSTypeWindows MDMOSType = "WINDOWS"
 )
 
-func NewPxGridMDM(ctrl Controller) MDM {
+func NewPxGridMDM(ctrl *PxGridConsumer) MDM {
 	return &pxGridMDM{
 		pxGridService{
 			name: "com.cisco.ise.mdm",
@@ -176,6 +176,15 @@ func (s *pxGridMDM) Subscribe() MDMSubscriber {
 	return s
 }
 
-func (s *pxGridMDM) OnEndpointTopic() (*Subscription[MDMEndpoint], error) {
-	return nil, errors.New("not implemented")
+func (s *pxGridMDM) OnEndpointTopic(ctx context.Context, node int) (*Subscription[MDMEndpoint], error) {
+	if node < 0 || node >= len(s.nodes) {
+		return nil, ErrNodeNotFound
+	}
+
+	topic, err := s.EndpointTopic()
+	if err != nil {
+		return nil, err
+	}
+
+	return subscribe[MDMEndpoint](ctx, s.ctrl.PubSub(), s.nodes[node], topic)
 }
