@@ -142,7 +142,44 @@ func (s *transport) ResolveHost(ctx context.Context, host string) (net.IPAddr, e
 }
 
 func (s *transport) UpdateClientCertificate(cert *tls.Certificate) {
+	s.tlsMutex.Lock()
+	defer s.tlsMutex.Unlock()
+
 	s.tls.ClientCertificate = cert
+}
+
+func (s *transport) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Resolver: s.resolver,
+	}
+	return dialer.DialContext(ctx, network, addr)
+}
+
+func (s *transport) ClientTLSConfig() *tls.Config {
+	s.tlsMutex.RLock()
+	defer s.tlsMutex.RUnlock()
+
+	tls := &tls.Config{InsecureSkipVerify: s.tls.InsecureTLS}
+	if s.tls.ClientCertificate != nil {
+		tls.Certificates = append(tls.Certificates, *s.tls.ClientCertificate)
+	}
+	if s.tls.pool != nil {
+		tls.RootCAs = s.tls.pool.Clone()
+	}
+
+	return tls
+}
+
+func (s *transport) NewRequest(ctx context.Context) *Request {
+	clonedAuth := s.auth
+	return &Request{
+		s:       s,
+		ctx:     ctx,
+		auth:    &clonedAuth,
+		rootCAs: nil,
+		tls:     s.tls,
+		client:  s.client.Clone(),
+	}
 }
 
 type (
@@ -275,38 +312,4 @@ func (r *Request) Post(u string, payload interface{}) (*Response, error) {
 	}
 
 	return &done, nil
-}
-
-func (s *transport) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	dialer := &net.Dialer{
-		Resolver: s.resolver,
-	}
-	return dialer.DialContext(ctx, network, addr)
-}
-
-func (s *transport) ClientTLSConfig() *tls.Config {
-	s.tlsMutex.RLock()
-	defer s.tlsMutex.RUnlock()
-
-	tls := &tls.Config{InsecureSkipVerify: s.tls.InsecureTLS}
-	if s.tls.ClientCertificate != nil {
-		tls.Certificates = append(tls.Certificates, *s.tls.ClientCertificate)
-	}
-	if s.tls.pool != nil {
-		tls.RootCAs = s.tls.pool.Clone()
-	}
-
-	return tls
-}
-
-func (s *transport) NewRequest(ctx context.Context) *Request {
-	clonedAuth := s.auth
-	return &Request{
-		s:       s,
-		ctx:     ctx,
-		auth:    &clonedAuth,
-		rootCAs: nil,
-		tls:     s.tls,
-		client:  s.client.Clone(),
-	}
 }

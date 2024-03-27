@@ -2,6 +2,7 @@ package gopxgrid
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 )
@@ -37,7 +38,7 @@ func mergeWithDefaultConfig(cfg *PxGridConfig) *PxGridConfig {
 	}
 
 	if cfg.Logger == nil {
-		cfg.Logger = newInternalLogger(cfg.LogLevel)
+		cfg.Logger = newInternalLogger()
 	}
 
 	return cfg
@@ -92,6 +93,12 @@ func (c *PxGridConsumer) RESTRequest(ctx context.Context, fullURL string, payloa
 	}
 	if c.svc.tls.pool != nil {
 		req.SetRootCAs(c.svc.tls.pool)
+	} else {
+		sys, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, err
+		}
+		req.SetRootCAs(sys)
 	}
 
 	res, err := req.Post(fullURL, payload)
