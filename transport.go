@@ -38,7 +38,7 @@ func dnsCfg(cfg *DNSConfig) *DNSConfig {
 func tlsCfg(cfg *TLSConfig) *TLSConfig {
 	if cfg == nil {
 		return &TLSConfig{
-			VerifyMode: CertVerifyModeCA,
+			InsecureTLS: true,
 		}
 	}
 
@@ -70,11 +70,7 @@ func newTransport(cfg *PxGridConfig) *transport {
 		}
 	}
 
-	if s.tls.VerifyMode == CertVerifyModeNone {
-		s.client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
-	} else {
-		s.client.SetTLSClientConfig(&tls.Config{})
-	}
+	s.client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: s.tls.InsecureTLS})
 
 	s.client.SetHeaders(map[string]string{
 		"Content-Type": "application/json",
@@ -168,13 +164,13 @@ type (
 )
 
 func (r *Request) getTLSClientConfig(serverName string) *tls.Config {
-	cfg := &tls.Config{}
+	cfg := &tls.Config{
+		InsecureSkipVerify: r.tls.InsecureTLS,
+	}
 	if r.tls.ClientCertificate != nil {
 		cfg.Certificates = []tls.Certificate{*r.tls.ClientCertificate}
 	}
-	if r.tls.VerifyMode == CertVerifyModeNone {
-		cfg.InsecureSkipVerify = true
-	}
+
 	cfg.ServerName = serverName
 	if r.rootCAs != nil {
 		cfg.RootCAs = r.rootCAs
@@ -292,12 +288,9 @@ func (s *transport) ClientTLSConfig() *tls.Config {
 	s.tlsMutex.RLock()
 	defer s.tlsMutex.RUnlock()
 
-	tls := &tls.Config{}
+	tls := &tls.Config{InsecureSkipVerify: s.tls.InsecureTLS}
 	if s.tls.ClientCertificate != nil {
 		tls.Certificates = append(tls.Certificates, *s.tls.ClientCertificate)
-	}
-	if s.tls.VerifyMode == CertVerifyModeNone {
-		tls.InsecureSkipVerify = true
 	}
 	if s.tls.pool != nil {
 		tls.RootCAs = s.tls.pool.Clone()

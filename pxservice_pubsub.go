@@ -196,7 +196,7 @@ func (e *PubSubEndpoint) Write(p []byte) (int, error) {
 	e.writeBuffer = append(e.writeBuffer, p...)
 	// if we reach a null byte or the entire message is a newline (heartbeat), send the message
 	if p[len(p)-1] == 0x00 || (len(e.writeBuffer) == 1 && len(p) == 1 && p[0] == 0x0a) {
-		err = e.ws.WriteMessage(1, e.writeBuffer)
+		err = e.ws.WriteMessage(websocket.TextMessage, e.writeBuffer)
 		e.writeBuffer = []byte{}
 	}
 	return len(p), err

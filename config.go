@@ -20,14 +20,6 @@ const (
 
 var DefaultINETFamilyStrategy = IPv46
 
-type CertVerifyMode int
-
-const (
-	CertVerifyModeNone CertVerifyMode = iota
-	CertVerifyModeCA
-	CertVerifyModeCAHost
-)
-
 type DNSConfig struct {
 	Server         string
 	FamilyStrategy INETFamilyStrategy
@@ -45,7 +37,7 @@ type AuthConfig struct {
 
 type TLSConfig struct {
 	ClientCertificate *tls.Certificate
-	VerifyMode        CertVerifyMode
+	InsecureTLS       bool
 	CA                []x509.Certificate
 
 	pool *x509.CertPool
