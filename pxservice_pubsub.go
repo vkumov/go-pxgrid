@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-stomp/stomp/v3"
@@ -44,6 +45,8 @@ type (
 		readerBuffer []byte
 		writeBuffer  []byte
 		log          *slog.Logger
+
+		l sync.RWMutex
 	}
 
 	pxGridPubSub struct {
@@ -55,12 +58,11 @@ type (
 )
 
 func NewPxGridPubSub(ctrl *PxGridConsumer, svc string) PubSub {
-	ctrl.cfg.Logger.Debug("New pxGrid PubSub service", "service", svc)
 	return &pxGridPubSub{
 		pxGridService: pxGridService{
 			name: svc,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.WithGroup("pubsub"),
+			log:  ctrl.cfg.Logger.With("svc", svc),
 		},
 		eps: make(map[string]*PubSubEndpoint),
 	}
@@ -90,7 +92,7 @@ func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePickerFa
 			}
 			continue
 		}
-		p.log.Debug("WS Endpoint", "wsURL", ep.wsURL)
+		p.log.Debug("Got WS Endpoint", "wsURL", ep.wsURL)
 
 		err = ep.connect(ctx)
 		if err != nil {
@@ -117,7 +119,7 @@ func (p *pxGridPubSub) createEndpoint(wsURL, secret string) *PubSubEndpoint {
 		wsURL:    wsURL,
 		nodeName: p.ctrl.cfg.NodeName,
 		secret:   secret,
-		log:      p.log.WithGroup("pxgrid.pubsub.endpoint"),
+		log:      p.log.With("wsURL", wsURL),
 	}
 
 	return ep
@@ -139,6 +141,7 @@ func (p *pxGridPubSub) getEndpoint(node ServiceNode) (*PubSubEndpoint, error) {
 	}
 
 	ep, ok := p.eps[wsURL]
+	p.log.Debug("Get WS PubSub Endpoint", "wsURL", wsURL, "exists", ok)
 	if !ok {
 		ep = p.createEndpoint(wsURL, node.Secret)
 		p.eps[wsURL] = ep
@@ -168,15 +171,69 @@ func (e *PubSubEndpoint) getAuthHeaders() http.Header {
 	return http.Header{"Authorization": {basic}}
 }
 
+func (e *PubSubEndpoint) checkConnection() (bool, error) {
+	e.l.RLock()
+	defer e.l.RUnlock()
+
+	if e.ws == nil {
+		return false, nil
+	}
+
+	e.log.Debug("Checking connection")
+
+	var open atomic.Bool
+	done := make(chan struct{})
+	oldHandler := e.ws.PongHandler()
+	defer e.ws.SetPongHandler(oldHandler)
+	e.ws.SetPongHandler(func(string) error {
+		open.Store(true)
+		close(done)
+		return nil
+	})
+
+	err := e.ws.WriteControl(websocket.PingMessage, []byte(""), time.Time{})
+	if err != nil {
+		return true, err
+	}
+
+	select {
+	case <-done:
+		return open.Load(), nil
+	case <-time.After(pongWait):
+		return true, errors.New("pong timeout")
+	}
+}
+
 func (e *PubSubEndpoint) connect(ctx context.Context) (err error) {
-	e.log.Debug("WebSocket dial", "wsURL", e.wsURL)
+	exists, err := e.checkConnection()
+	e.log.Debug("Connection check", "exists", exists, "error", err)
+	if exists {
+		if err == nil {
+			e.log.Debug("Connection is still open")
+			return nil
+		}
+
+		e.log.Warn("Half-open connection, closing", "error", err)
+
+		e.l.Lock()
+		e.ws.Close()
+		e.ws = nil
+		e.stomp = nil
+		e.l.Unlock()
+	}
+
+	e.l.Lock()
+	defer e.l.Unlock()
+	e.log.Debug("WebSocket dial")
 	e.ws, _, err = e.dialer.DialContext(ctx, e.wsURL, e.getAuthHeaders())
 	if err != nil {
 		return err
 	}
 
 	e.log.Debug("STOMP connect")
-	e.stomp, err = stomp.Connect(e, stomp.ConnOpt.HeartBeat(0, 0))
+	e.stomp, err = stomp.Connect(e,
+		stomp.ConnOpt.HeartBeat(0, 0),
+		stomp.ConnOpt.Logger(fromSlogLogger(e.log)))
 	if err != nil {
 		return errors.Join(err, e.ws.Close())
 	}
@@ -195,6 +252,7 @@ func (e *PubSubEndpoint) connect(ctx context.Context) (err error) {
 }
 
 func (e *PubSubEndpoint) Disconnect() error {
+	e.log.Debug("Disconnecting")
 	e.ticker.Stop()
 	return e.ws.Close()
 }

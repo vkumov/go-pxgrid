@@ -47,7 +47,7 @@ func NewPxGridSystemHealth(ctrl *PxGridConsumer) SystemHealth {
 		pxGridService{
 			name: "com.cisco.ise.system",
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.WithGroup("system_health"),
+			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.system"),
 		},
 	}
 }

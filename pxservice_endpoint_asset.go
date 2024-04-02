@@ -60,7 +60,7 @@ func NewPxGridEndpointAsset(ctrl *PxGridConsumer) EndpointAsset {
 		pxGridService{
 			name: "com.cisco.endpoint.asset",
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.WithGroup("endpoint_asset"),
+			log:  ctrl.cfg.Logger.With("svc", "com.cisco.endpoint.asset"),
 		},
 	}
 }

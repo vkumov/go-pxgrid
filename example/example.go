@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 
 var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-func dataPrinter(dataChan <-chan *gopxgrid.Message[gopxgrid.SessionTopicMessage]) {
+func dataPrinter[T any](dataChan <-chan *gopxgrid.Message[T]) {
 	for data := range dataChan {
 		if data.Err == nil && data.UnmarshalError == nil {
 			bts, _ := json.Marshal(data.Body)
@@ -138,13 +139,13 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sigs := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
+	closed := make(chan bool, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
 		logger.Info("Disconnecting from pxGrid")
 		cancel()
-		done <- true
+		close(closed)
 	}()
 
 	for {
@@ -162,7 +163,7 @@ func main() {
 
 	logger.Info("Account activated")
 	sd := control.SessionDirectory()
-	err = sd.CheckNodes(ctx)
+	err = sd.UpdateSecrets(ctx)
 	if err != nil {
 		logger.Error("Failed to check nodes", "err", err)
 		os.Exit(1)
@@ -181,23 +182,48 @@ func main() {
 		os.Exit(1)
 	}
 
-	sub, err := sd.OnSessionTopic().Subscribe(ctx)
-	if err != nil {
-		logger.Error("Failed to subscribe to session topic", "err", err)
-		os.Exit(1)
-	}
+	var wg sync.WaitGroup
 
-	go dataPrinter(sub.C)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sub, err := sd.OnSessionTopic().Subscribe(ctx)
+		if err != nil {
+			logger.Error("Failed to subscribe to session topic", "err", err)
+			os.Exit(1)
+		}
+		defer func() {
+			if err = sub.Unsubscribe(); err != nil {
+				logger.Error("Failed to unsubscribe", "err", err)
+			}
+		}()
 
-	// Setup abort channel
+		go dataPrinter(sub.C)
+		<-closed
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sub, err := sd.OnGroupTopic().Subscribe(ctx)
+		if err != nil {
+			logger.Error("Failed to subscribe to group topic", "err", err)
+			os.Exit(1)
+		}
+		defer func() {
+			if err = sub.Unsubscribe(); err != nil {
+				logger.Error("Failed to unsubscribe", "err", err)
+			}
+		}()
+
+		go dataPrinter(sub.C)
+		<-closed
+	}()
+
 	logger.Info("Press <Ctrl-c> to disconnect...")
-	<-done
+	<-closed
 
-	logger.Info("Unsubscribing from session topic")
-	err = sub.Unsubscribe()
-	if err != nil {
-		logger.Error("Failed to unsubscribe", "err", err)
-		os.Exit(1)
-	}
+	wg.Wait()
+
 	logger.Info("Unsubscribed, exiting...")
 }

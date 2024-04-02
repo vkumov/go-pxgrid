@@ -88,7 +88,7 @@ func NewPxGridRadiusFailure(ctrl *PxGridConsumer) RadiusFailure {
 		pxGridService{
 			name: "com.cisco.ise.radius",
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.WithGroup("radius_failure"),
+			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.radius"),
 		},
 	}
 }

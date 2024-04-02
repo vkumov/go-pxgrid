@@ -147,7 +147,7 @@ func (s *subscriber[T]) populatePubSub(ctx context.Context) error {
 		return nil
 	}
 
-	s.svc.log.Debug("Populating PubSub")
+	s.svc.log.Debug("Populating PubSub in subscriber")
 	pubSubServiceName, err := s.getPubSubServiceName(ctx)
 	if err != nil {
 		return err

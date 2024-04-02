@@ -49,6 +49,7 @@ func (s *pxGridService) Name() string {
 
 // Lookup retrieves the service nodes from the controller
 func (s *pxGridService) Lookup(ctx context.Context) error {
+	s.log.Debug("Looking up service", "service", s.name)
 	r, err := s.ctrl.ServiceLookup(ctx, s.name)
 	if err != nil {
 		return err

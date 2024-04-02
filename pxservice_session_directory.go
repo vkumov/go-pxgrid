@@ -146,7 +146,7 @@ func NewPxGridSessionDirectory(ctrl *PxGridConsumer) SessionDirectory {
 		pxGridService{
 			name: "com.cisco.ise.session",
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.WithGroup("session_directory"),
+			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.session"),
 		},
 	}
 }
