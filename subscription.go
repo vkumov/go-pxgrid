@@ -181,6 +181,7 @@ func (s *subscriber[T]) Subscribe(ctx context.Context) (*Subscription[T], error)
 	if err != nil {
 		return nil, err
 	}
+	s.svc.log.Debug("STOMP Subscribed to topic", "topic", topic)
 
 	return &Subscription[T]{
 		Subscription: sub,
