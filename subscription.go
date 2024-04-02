@@ -147,6 +147,7 @@ func (s *subscriber[T]) populatePubSub(ctx context.Context) error {
 		return nil
 	}
 
+	s.svc.log.Debug("Populating PubSub")
 	pubSubServiceName, err := s.getPubSubServiceName(ctx)
 	if err != nil {
 		return err
@@ -161,6 +162,7 @@ func (s *subscriber[T]) Subscribe(ctx context.Context) (*Subscription[T], error)
 		s.svcNodePicker = OrderedNodePicker()
 	}
 
+	s.svc.log.Debug("Subscribing to topic", "topicProperty", s.topicProperty)
 	if err := s.populatePubSub(ctx); err != nil {
 		return nil, err
 	}
@@ -173,6 +175,7 @@ func (s *subscriber[T]) Subscribe(ctx context.Context) (*Subscription[T], error)
 	if err != nil {
 		return nil, err
 	}
+	s.svc.log.Debug("Subscribing to topic", "topic", topic)
 
 	sub, err := s.pubsub.Subscribe(ctx, s.pubSubNodePicker, topic)
 	if err != nil {

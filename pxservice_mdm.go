@@ -75,6 +75,7 @@ func NewPxGridMDM(ctrl *PxGridConsumer) MDM {
 		pxGridService{
 			name: "com.cisco.ise.mdm",
 			ctrl: ctrl,
+			log:  ctrl.cfg.Logger.WithGroup("mdm"),
 		},
 	}
 }

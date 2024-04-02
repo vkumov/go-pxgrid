@@ -3,8 +3,7 @@ package gopxgrid
 import (
 	"crypto/tls"
 	"crypto/x509"
-
-	"github.com/go-stomp/stomp/v3"
+	"log/slog"
 )
 
 type INETFamilyStrategy int
@@ -37,9 +36,7 @@ type AuthConfig struct {
 type TLSConfig struct {
 	ClientCertificate *tls.Certificate
 	InsecureTLS       bool
-	CA                []x509.Certificate
-
-	pool *x509.CertPool
+	CA                *x509.CertPool
 }
 
 type PxGridConfig struct {
@@ -49,7 +46,7 @@ type PxGridConfig struct {
 	Description string
 	TLS         TLSConfig
 	DNS         DNSConfig
-	Logger      stomp.Logger
+	Logger      *slog.Logger
 }
 
 func NewPxGridConfig() *PxGridConfig {
@@ -86,7 +83,7 @@ func (c *PxGridConfig) SetDescription(desc string) *PxGridConfig {
 	return c
 }
 
-func (c *PxGridConfig) SetLogger(logger stomp.Logger) *PxGridConfig {
+func (c *PxGridConfig) SetLogger(logger *slog.Logger) *PxGridConfig {
 	c.Logger = logger
 	return c
 }
@@ -101,7 +98,7 @@ func (c *PxGridConfig) SetInsecureTLS(insecure bool) *PxGridConfig {
 	return c
 }
 
-func (c *PxGridConfig) SetCA(ca []x509.Certificate) *PxGridConfig {
+func (c *PxGridConfig) SetCA(ca *x509.CertPool) *PxGridConfig {
 	c.TLS.CA = ca
 	return c
 }

@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-resty/resty/v2"
@@ -42,13 +43,6 @@ func tlsCfg(cfg *TLSConfig) *TLSConfig {
 		}
 	}
 
-	if len(cfg.CA) > 0 {
-		cfg.pool = x509.NewCertPool()
-		for _, c := range cfg.CA {
-			cfg.pool.AddCert(&c)
-		}
-	}
-
 	return cfg
 }
 
@@ -61,11 +55,16 @@ func newTransport(cfg *PxGridConfig) *transport {
 	}
 
 	if s.dns.Server != "" {
+		host := s.dns.Server
+		if strings.Index(host, ":") == -1 {
+			host = host + ":53"
+		}
+
 		s.resolver = &net.Resolver{
 			PreferGo: true,
 			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 				d := net.Dialer{}
-				return d.DialContext(ctx, "udp", s.dns.Server)
+				return d.DialContext(ctx, "udp", host)
 			},
 		}
 	}
@@ -163,8 +162,8 @@ func (s *transport) ClientTLSConfig() *tls.Config {
 	if s.tls.ClientCertificate != nil {
 		tls.Certificates = append(tls.Certificates, *s.tls.ClientCertificate)
 	}
-	if s.tls.pool != nil {
-		tls.RootCAs = s.tls.pool.Clone()
+	if s.tls.CA != nil {
+		tls.RootCAs = s.tls.CA.Clone()
 	}
 
 	return tls

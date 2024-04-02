@@ -120,6 +120,7 @@ func NewPxGridANCConfig(ctrl *PxGridConsumer) ANCConfig {
 		pxGridService: pxGridService{
 			name: "com.cisco.ise.config.anc",
 			ctrl: ctrl,
+			log:  ctrl.cfg.Logger.WithGroup("anc_config"),
 		},
 	}
 }

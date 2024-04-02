@@ -63,6 +63,7 @@ func NewPxGridTrustSec(ctrl *PxGridConsumer) TrustSec {
 		pxGridService{
 			name: "com.cisco.ise.trustsec",
 			ctrl: ctrl,
+			log:  ctrl.cfg.Logger.WithGroup("trustsec"),
 		},
 	}
 }

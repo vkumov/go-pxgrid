@@ -52,6 +52,7 @@ func NewPxGridProfilerConfiguration(ctrl *PxGridConsumer) ProfilerConfiguration 
 		pxGridService{
 			name: "com.cisco.ise.config.profiler",
 			ctrl: ctrl,
+			log:  ctrl.cfg.Logger.WithGroup("profiler_config"),
 		},
 	}
 }

@@ -3,6 +3,7 @@ package gopxgrid
 import (
 	"context"
 	"fmt"
+	"log/slog"
 )
 
 var (
@@ -38,6 +39,7 @@ type pxGridService struct {
 	name  string
 	nodes ServiceNodeSlice
 	ctrl  *PxGridConsumer
+	log   *slog.Logger
 }
 
 // Name returns the name of the service
@@ -58,6 +60,7 @@ func (s *pxGridService) Lookup(ctx context.Context) error {
 
 // CheckNodes ensures that the service has nodes
 func (s *pxGridService) CheckNodes(ctx context.Context) error {
+	s.log.Debug("Checking nodes for service", "service", s.name)
 	if len(s.nodes) == 0 {
 		err := s.Lookup(ctx)
 		if err != nil {
@@ -65,6 +68,7 @@ func (s *pxGridService) CheckNodes(ctx context.Context) error {
 		}
 	}
 
+	s.log.Debug("Nodes found for service", "service", s.name, "nodes", len(s.nodes))
 	if len(s.nodes) == 0 {
 		return ErrServiceUnavailable
 	}
@@ -74,6 +78,7 @@ func (s *pxGridService) CheckNodes(ctx context.Context) error {
 
 // UpdateNodeSecret retrieves the secret for a node by index
 func (s *pxGridService) UpdateNodeSecret(ctx context.Context, idx int) error {
+	s.log.Debug("Updating secret for node", "service", s.name, "node", idx)
 	if idx < 0 || idx >= len(s.nodes) {
 		return fmt.Errorf("invalid node index %d", idx)
 	}
@@ -89,6 +94,7 @@ func (s *pxGridService) UpdateNodeSecret(ctx context.Context, idx int) error {
 
 // UpdateNodeSecretByName retrieves the secret for a node by name
 func (s *pxGridService) UpdateNodeSecretByName(ctx context.Context, nodeName string) error {
+	s.log.Debug("Updating secret for node", "service", s.name, "node", nodeName)
 	idx, err := s.FindNodeIndexByName(nodeName)
 	if err != nil {
 		return err

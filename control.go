@@ -140,3 +140,15 @@ func (c *PxGridConsumer) DialContext(ctx context.Context, network, addr string) 
 func (c *PxGridConsumer) ClientTLSConfig() *tls.Config {
 	return c.svc.ClientTLSConfig()
 }
+
+func (a AccountActivateResponse) IsEnabled() bool {
+	return a.AccountState == AccountStateEnabled
+}
+
+func (a AccountActivateResponse) IsDisabled() bool {
+	return a.AccountState == AccountStateDisabled
+}
+
+func (a AccountActivateResponse) IsPending() bool {
+	return a.AccountState == AccountStatePending
+}

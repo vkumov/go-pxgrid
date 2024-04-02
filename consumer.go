@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 )
 
@@ -42,7 +43,7 @@ func mergeWithDefaultConfig(cfg *PxGridConfig) *PxGridConfig {
 	}
 
 	if cfg.Logger == nil {
-		cfg.Logger = newInternalLogger()
+		cfg.Logger = slog.Default()
 	}
 
 	return cfg
@@ -94,8 +95,8 @@ func (c *PxGridConsumer) RESTRequest(ctx context.Context, fullURL string, payloa
 	if ops.result != nil {
 		req.SetResult(ops.result)
 	}
-	if c.svc.tls.pool != nil {
-		req.SetRootCAs(c.svc.tls.pool)
+	if c.svc.tls.CA != nil {
+		req.SetRootCAs(c.svc.tls.CA)
 	} else {
 		sys, err := x509.SystemCertPool()
 		if err != nil {
@@ -148,6 +149,10 @@ func (c *PxGridConsumer) ProfilerConfiguration() ProfilerConfiguration {
 func (c *PxGridConsumer) PubSub(service string) PubSub {
 	c.pubsubMutex.Lock()
 	defer c.pubsubMutex.Unlock()
+
+	if c.pubsubs == nil {
+		c.pubsubs = make(map[string]PubSub)
+	}
 
 	svc, ok := c.pubsubs[service]
 	if !ok {

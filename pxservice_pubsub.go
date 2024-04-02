@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"sync"
@@ -42,6 +43,7 @@ type (
 
 		readerBuffer []byte
 		writeBuffer  []byte
+		log          *slog.Logger
 	}
 
 	pxGridPubSub struct {
@@ -53,10 +55,12 @@ type (
 )
 
 func NewPxGridPubSub(ctrl *PxGridConsumer, svc string) PubSub {
+	ctrl.cfg.Logger.Debug("New pxGrid PubSub service", "service", svc)
 	return &pxGridPubSub{
 		pxGridService: pxGridService{
 			name: svc,
 			ctrl: ctrl,
+			log:  ctrl.cfg.Logger.WithGroup("pubsub"),
 		},
 		eps: make(map[string]*PubSubEndpoint),
 	}
@@ -77,6 +81,7 @@ func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePickerFa
 		if err != nil {
 			return nil, err
 		}
+		p.log.Debug("PubSub Subscribe", "node", node.NodeName, "secret", node.Secret, "topic", topic)
 
 		ep, err := p.getEndpoint(node)
 		if err != nil {
@@ -85,6 +90,7 @@ func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePickerFa
 			}
 			continue
 		}
+		p.log.Debug("WS Endpoint", "wsURL", ep.wsURL)
 
 		err = ep.connect(ctx)
 		if err != nil {
@@ -98,7 +104,8 @@ func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePickerFa
 	}
 }
 
-func (p *pxGridPubSub) createEndpoint(wsURL, nodeName, secret string) *PubSubEndpoint {
+func (p *pxGridPubSub) createEndpoint(wsURL, secret string) *PubSubEndpoint {
+	p.log.Debug("Create WS PubSub Endpoint", "wsURL", wsURL, "nodeName", p.ctrl.cfg.NodeName)
 	ep := &PubSubEndpoint{
 		dialer: websocket.Dialer{
 			TLSClientConfig: p.ctrl.ClientTLSConfig(),
@@ -108,8 +115,9 @@ func (p *pxGridPubSub) createEndpoint(wsURL, nodeName, secret string) *PubSubEnd
 			},
 		},
 		wsURL:    wsURL,
-		nodeName: nodeName,
+		nodeName: p.ctrl.cfg.NodeName,
 		secret:   secret,
+		log:      p.log.WithGroup("pxgrid.pubsub.endpoint"),
 	}
 
 	return ep
@@ -132,7 +140,7 @@ func (p *pxGridPubSub) getEndpoint(node ServiceNode) (*PubSubEndpoint, error) {
 
 	ep, ok := p.eps[wsURL]
 	if !ok {
-		ep = p.createEndpoint(wsURL, node.NodeName, node.Secret)
+		ep = p.createEndpoint(wsURL, node.Secret)
 		p.eps[wsURL] = ep
 	}
 
@@ -146,8 +154,10 @@ const (
 
 func (e *PubSubEndpoint) pinger(ch <-chan time.Time) {
 	for range ch {
+		e.log.Debug("Sending ping")
 		err := e.ws.WriteControl(websocket.PingMessage, []byte(""), time.Time{})
 		if err != nil {
+			e.log.Error("Ping failed", "error", err)
 			return
 		}
 	}
@@ -159,17 +169,21 @@ func (e *PubSubEndpoint) getAuthHeaders() http.Header {
 }
 
 func (e *PubSubEndpoint) connect(ctx context.Context) (err error) {
+	e.log.Debug("WebSocket dial", "wsURL", e.wsURL)
 	e.ws, _, err = e.dialer.DialContext(ctx, e.wsURL, e.getAuthHeaders())
 	if err != nil {
 		return err
 	}
 
-	e.stomp, err = stomp.Connect(e)
+	e.log.Debug("STOMP connect")
+	e.stomp, err = stomp.Connect(e, stomp.ConnOpt.HeartBeat(0, 0))
 	if err != nil {
 		return errors.Join(err, e.ws.Close())
 	}
 
+	e.log.Debug("STOMP connected, setting up ping/pong")
 	e.ws.SetPongHandler(func(string) error {
+		e.log.Debug("Received pong")
 		e.ws.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
@@ -205,7 +219,7 @@ func (e *PubSubEndpoint) Write(p []byte) (int, error) {
 	e.writeBuffer = append(e.writeBuffer, p...)
 	// if we reach a null byte or the entire message is a newline (heartbeat), send the message
 	if p[len(p)-1] == 0x00 || (len(e.writeBuffer) == 1 && len(p) == 1 && p[0] == 0x0a) {
-		err = e.ws.WriteMessage(websocket.TextMessage, e.writeBuffer)
+		err = e.ws.WriteMessage(websocket.BinaryMessage, e.writeBuffer)
 		e.writeBuffer = []byte{}
 	}
 	return len(p), err
