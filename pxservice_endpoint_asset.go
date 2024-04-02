@@ -1,9 +1,5 @@
 package gopxgrid
 
-import (
-	"context"
-)
-
 type (
 	ANCKeyValue struct {
 		Key   string `json:"key"`
@@ -36,14 +32,16 @@ type (
 		AssetTopic() (string, error)
 	}
 
+	EndpointAssetTopic string
+
 	EndpointAssetSubscriber interface {
-		OnAssetTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCAssetTopicMessage], error)
+		OnAssetTopic() Subscriber[ANCAssetTopicMessage]
 	}
 
 	EndpointAsset interface {
 		PxGridService
 
-		Subscribe() EndpointAssetSubscriber
+		EndpointAssetSubscriber
 
 		Properties() EndpointAssetPropsProvider
 	}
@@ -51,6 +49,10 @@ type (
 	pxGridEndpointAsset struct {
 		pxGridService
 	}
+)
+
+const (
+	EndpointAssetTopicAsset EndpointAssetTopic = "assetTopic"
 )
 
 func NewPxGridEndpointAsset(ctrl *PxGridConsumer) EndpointAsset {
@@ -71,18 +73,13 @@ func (e *pxGridEndpointAsset) WSPubsubService() (string, error) {
 }
 
 func (e *pxGridEndpointAsset) AssetTopic() (string, error) {
-	return e.nodes.GetPropertyString("assetTopic")
+	return e.nodes.GetPropertyString(string(EndpointAssetTopicAsset))
 }
 
-func (e *pxGridEndpointAsset) Subscribe() EndpointAssetSubscriber {
-	return e
-}
-
-func (e *pxGridEndpointAsset) OnAssetTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCAssetTopicMessage], error) {
-	topic, err := e.AssetTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[ANCAssetTopicMessage](ctx, e.ctrl.PubSub(), nodePicker, topic)
+func (e *pxGridEndpointAsset) OnAssetTopic() Subscriber[ANCAssetTopicMessage] {
+	return newSubscriber[ANCAssetTopicMessage](
+		&e.pxGridService,
+		string(EndpointAssetTopicAsset),
+		e.WSPubsubService,
+	)
 }

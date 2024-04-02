@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -58,8 +57,10 @@ type (
 		FailureTopic() (string, error)
 	}
 
+	RadiusFailureTopic string
+
 	RadiusFailureSubscriber interface {
-		OnFailureTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[FailureTopicMessage], error)
+		OnFailureTopic() Subscriber[FailureTopicMessage]
 	}
 
 	RadiusFailure interface {
@@ -68,7 +69,7 @@ type (
 		GetFailures() CallFinalizer[*[]Failure]
 		GetFailureByID(id string) CallFinalizer[*Failure]
 
-		Subscribe() RadiusFailureSubscriber
+		RadiusFailureSubscriber
 
 		Properties() RadiusFailurePropsProvider
 	}
@@ -76,6 +77,10 @@ type (
 	pxGridRadiusFailure struct {
 		pxGridService
 	}
+)
+
+const (
+	RadiusFailureTopicFailure RadiusFailureTopic = "failureTopic"
 )
 
 func NewPxGridRadiusFailure(ctrl *PxGridConsumer) RadiusFailure {
@@ -133,18 +138,13 @@ func (r *pxGridRadiusFailure) WSPubsubService() (string, error) {
 }
 
 func (r *pxGridRadiusFailure) FailureTopic() (string, error) {
-	return r.nodes.GetPropertyString("failureTopic")
+	return r.nodes.GetPropertyString(string(RadiusFailureTopicFailure))
 }
 
-func (r *pxGridRadiusFailure) Subscribe() RadiusFailureSubscriber {
-	return r
-}
-
-func (r *pxGridRadiusFailure) OnFailureTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[FailureTopicMessage], error) {
-	topic, err := r.FailureTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[FailureTopicMessage](ctx, r.ctrl.PubSub(), nodePicker, topic)
+func (r *pxGridRadiusFailure) OnFailureTopic() Subscriber[FailureTopicMessage] {
+	return newSubscriber[FailureTopicMessage](
+		&r.pxGridService,
+		string(RadiusFailureTopicFailure),
+		r.WSPubsubService,
+	)
 }

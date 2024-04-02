@@ -27,8 +27,9 @@ type PxGridService interface {
 	Lookup(ctx context.Context) error
 	UpdateSecrets(ctx context.Context) error
 	CheckNodes(ctx context.Context) error
-	FindProperty(ctx context.Context, property string, onlyNodes ...int) (any, error)
+	FindProperty(ctx context.Context, property string, nodePick ...ServiceNodePickerFactory) (any, error)
 	FindNodeIndexByName(name string) (int, error)
+	On(topicProperty string) Subscriber[any]
 }
 
 var _ PxGridService = (*pxGridService)(nil)
@@ -65,7 +66,7 @@ func (s *pxGridService) CheckNodes(ctx context.Context) error {
 	}
 
 	if len(s.nodes) == 0 {
-		return ErrNoHosts
+		return ErrServiceUnavailable
 	}
 
 	return nil
@@ -140,43 +141,74 @@ func (s *pxGridService) getIterateNodes(onlyNodes ...int) []ServiceNode {
 }
 
 // FindProperty returns the value of a property
-func (s *pxGridService) FindProperty(ctx context.Context, property string, onlyNodes ...int) (any, error) {
+func (s *pxGridService) FindProperty(ctx context.Context, property string, nodePick ...ServiceNodePickerFactory) (any, error) {
 	err := s.CheckNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, n := range s.getIterateNodes(onlyNodes...) {
-		if n.Properties == nil {
+	n := s.orDefaultFactory(nodePick...)(s.nodes)
+	for {
+		node, more, err := n.PickNode()
+		if err != nil {
+			return nil, err
+		}
+
+		if node.Properties == nil {
+			if !more {
+				break
+			}
 			continue
 		}
 
-		if v, ok := n.Properties[property]; ok {
+		if v, ok := node.Properties[property]; ok {
 			return v, nil
+		}
+
+		if !more {
+			break
 		}
 	}
 
 	return nil, fmt.Errorf("property %s not found", property)
 }
 
-func (s *pxGridService) overAll(ctx context.Context, call string, payload any, result any, onlyNodes ...int) (*Response, error) {
-	for _, n := range s.getIterateNodes(onlyNodes...) {
-		if n.Secret == "" {
-			if err := s.UpdateNodeSecretByName(ctx, n.NodeName); err != nil {
+func (s *pxGridService) On(topicProperty string) Subscriber[any] {
+	return newSubscriber[any](s, topicProperty, nil)
+}
+
+func (s *pxGridService) overAll(ctx context.Context, call string, payload any, result any,
+	pickNode ...ServiceNodePickerFactory,
+) (*Response, error) {
+	n := s.orDefaultFactory(pickNode...)(s.nodes)
+	for {
+		node, more, err := n.PickNode()
+		if err != nil {
+			return nil, err
+		}
+
+		if node.Secret == "" {
+			if err := s.UpdateNodeSecretByName(ctx, node.NodeName); err != nil {
 				return nil, err
 			}
 		}
 
-		restBaseURL, ok := n.Properties["restBaseUrl"].(string)
+		restBaseURL, ok := node.Properties["restBaseUrl"].(string)
 		if !ok {
+			if !more {
+				break
+			}
 			continue
 		}
 
 		res, err := s.ctrl.RESTRequest(ctx, ensureTrailingSlash(restBaseURL)+call, payload, RESTOptions{
-			overridePassword: n.Secret,
+			overridePassword: node.Secret,
 			result:           result,
 		})
 		if err != nil {
+			if !more {
+				return nil, err
+			}
 			continue
 		}
 
@@ -186,18 +218,28 @@ func (s *pxGridService) overAll(ctx context.Context, call string, payload any, r
 	return nil, fmt.Errorf("all nodes failed to %s", call)
 }
 
-func (s *pxGridService) call(ctx context.Context, call string, payload any, result any, onlyNodes ...int) (*Response, error) {
+func (s *pxGridService) call(ctx context.Context, call string, payload any, result any,
+	pickNode ...ServiceNodePickerFactory,
+) (*Response, error) {
 	err := s.CheckNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := s.overAll(ctx, call, payload, result, onlyNodes...)
+	res, err := s.overAll(ctx, call, payload, result, pickNode...)
 	if err != nil {
 		return nil, err
 	}
 
 	return res, nil
+}
+
+func (s *pxGridService) orDefaultFactory(f ...ServiceNodePickerFactory) ServiceNodePickerFactory {
+	if len(f) > 0 && f[0] != nil {
+		return f[0]
+	}
+
+	return OrderedNodePicker()
 }
 
 func ensureTrailingSlash(s string) string {
@@ -263,7 +305,7 @@ func (c *call[R]) DoOnNode(ctx context.Context, node int) (R, error) {
 		return c.result, c.fatal
 	}
 
-	res, err := c.svc.call(ctx, c.call, c.payload, c.result, node)
+	res, err := c.svc.call(ctx, c.call, c.payload, c.result, IndexNodePicker(node))
 	if err != nil {
 		return c.result, err
 	}
@@ -293,7 +335,7 @@ func (c *call[R]) DoOnNodes(ctx context.Context, nodes ...int) (R, error) {
 		return c.result, c.fatal
 	}
 
-	res, err := c.svc.call(ctx, c.call, c.payload, c.result, nodes...)
+	res, err := c.svc.call(ctx, c.call, c.payload, c.result, IndexNodePicker(nodes...))
 	if err != nil {
 		return c.result, err
 	}
@@ -348,7 +390,7 @@ func (c *noResultCall[T]) DoOnNode(ctx context.Context, node int) error {
 	}
 
 	var result T
-	res, err := c.svc.call(ctx, c.call, c.payload, result, node)
+	res, err := c.svc.call(ctx, c.call, c.payload, result, IndexNodePicker(node))
 	if err != nil {
 		return err
 	}
@@ -377,7 +419,7 @@ func (c *noResultCall[T]) DoOnNodes(ctx context.Context, nodes ...int) error {
 	}
 
 	var result T
-	res, err := c.svc.call(ctx, c.call, c.payload, result, nodes...)
+	res, err := c.svc.call(ctx, c.call, c.payload, result, IndexNodePicker(nodes...))
 	if err != nil {
 		return err
 	}

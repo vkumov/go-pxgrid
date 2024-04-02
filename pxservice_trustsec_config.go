@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -133,12 +132,14 @@ type (
 		Timestamp          string   `json:"timestamp"`
 	}
 
+	TrustSecConfigurationTopic string
+
 	TrustSecConfigurationSubscriber interface {
-		OnSecurityGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupTopicMessage], error)
-		OnSecurityGroupACLTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupACLTopicMessage], error)
-		OnSecurityGroupVNVlanTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupVNVlanTopicMessage], error)
-		OnVirtualNetworkTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[VirtualNetworkTopicMessage], error)
-		OnEgressPolicyTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[EgressPolicyTopicMessage], error)
+		OnSecurityGroupTopic() Subscriber[SecurityGroupTopicMessage]
+		OnSecurityGroupACLTopic() Subscriber[SecurityGroupACLTopicMessage]
+		OnSecurityGroupVNVlanTopic() Subscriber[SecurityGroupVNVlanTopicMessage]
+		OnVirtualNetworkTopic() Subscriber[VirtualNetworkTopicMessage]
+		OnEgressPolicyTopic() Subscriber[EgressPolicyTopicMessage]
 	}
 
 	TrustSecConfiguration interface {
@@ -150,7 +151,7 @@ type (
 		GetEgressPolicies(filters ...TrustSecEgressPoliciesRequestFilter) CallFinalizer[*GetEgressPoliciesResponse]
 		GetEgressMatrices() CallFinalizer[*[]EgressMatrix]
 
-		Subscribe() TrustSecConfigurationSubscriber
+		TrustSecConfigurationSubscriber
 
 		Properties() TrustSecConfigurationPropsProvider
 	}
@@ -158,6 +159,14 @@ type (
 	pxGridTrustSecConfiguration struct {
 		pxGridService
 	}
+)
+
+const (
+	TrustSecConfigurationTopicSecurityGroup       TrustSecConfigurationTopic = "securityGroupTopic"
+	TrustSecConfigurationTopicSecurityGroupACL    TrustSecConfigurationTopic = "securityGroupAclTopic"
+	TrustSecConfigurationTopicSecurityGroupVNVlan TrustSecConfigurationTopic = "securityGroupVnVlanTopic"
+	TrustSecConfigurationTopicVirtualNetwork      TrustSecConfigurationTopic = "virtualnetworkTopic"
+	TrustSecConfigurationTopicEgressPolicy        TrustSecConfigurationTopic = "egressPolicyTopic"
 )
 
 func NewPxGridTrustSecConfiguration(ctrl *PxGridConsumer) TrustSecConfiguration {
@@ -182,23 +191,23 @@ func (t *pxGridTrustSecConfiguration) WSPubsubService() (string, error) {
 }
 
 func (t *pxGridTrustSecConfiguration) SecurityGroupTopic() (string, error) {
-	return t.nodes.GetPropertyString("securityGroupTopic")
+	return t.nodes.GetPropertyString(string(TrustSecConfigurationTopicSecurityGroup))
 }
 
 func (t *pxGridTrustSecConfiguration) SecurityGroupACLTopic() (string, error) {
-	return t.nodes.GetPropertyString("securityGroupAclTopic")
+	return t.nodes.GetPropertyString(string(TrustSecConfigurationTopicSecurityGroupACL))
 }
 
 func (t *pxGridTrustSecConfiguration) SecurityGroupVNVlanTopic() (string, error) {
-	return t.nodes.GetPropertyString("securityGroupVnVlanTopic")
+	return t.nodes.GetPropertyString(string(TrustSecConfigurationTopicSecurityGroupVNVlan))
 }
 
 func (t *pxGridTrustSecConfiguration) VirtualNetworkTopic() (string, error) {
-	return t.nodes.GetPropertyString("virtualnetworkTopic")
+	return t.nodes.GetPropertyString(string(TrustSecConfigurationTopicVirtualNetwork))
 }
 
 func (t *pxGridTrustSecConfiguration) EgressPolicyTopic() (string, error) {
-	return t.nodes.GetPropertyString("egressPolicyTopic")
+	return t.nodes.GetPropertyString(string(TrustSecConfigurationTopicEgressPolicy))
 }
 
 type (
@@ -393,51 +402,42 @@ func (t *pxGridTrustSecConfiguration) GetEgressMatrices() CallFinalizer[*[]Egres
 	)
 }
 
-func (t *pxGridTrustSecConfiguration) Subscribe() TrustSecConfigurationSubscriber {
-	return t
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupTopic() Subscriber[SecurityGroupTopicMessage] {
+	return newSubscriber[SecurityGroupTopicMessage](
+		&t.pxGridService,
+		string(TrustSecConfigurationTopicSecurityGroup),
+		t.WSPubsubService,
+	)
 }
 
-func (t *pxGridTrustSecConfiguration) OnSecurityGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupTopicMessage], error) {
-	topic, err := t.SecurityGroupTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[SecurityGroupTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupACLTopic() Subscriber[SecurityGroupACLTopicMessage] {
+	return newSubscriber[SecurityGroupACLTopicMessage](
+		&t.pxGridService,
+		string(TrustSecConfigurationTopicSecurityGroupACL),
+		t.WSPubsubService,
+	)
 }
 
-func (t *pxGridTrustSecConfiguration) OnSecurityGroupACLTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupACLTopicMessage], error) {
-	topic, err := t.SecurityGroupACLTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[SecurityGroupACLTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
+func (t *pxGridTrustSecConfiguration) OnSecurityGroupVNVlanTopic() Subscriber[SecurityGroupVNVlanTopicMessage] {
+	return newSubscriber[SecurityGroupVNVlanTopicMessage](
+		&t.pxGridService,
+		string(TrustSecConfigurationTopicSecurityGroupVNVlan),
+		t.WSPubsubService,
+	)
 }
 
-func (t *pxGridTrustSecConfiguration) OnSecurityGroupVNVlanTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SecurityGroupVNVlanTopicMessage], error) {
-	topic, err := t.SecurityGroupVNVlanTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[SecurityGroupVNVlanTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
+func (t *pxGridTrustSecConfiguration) OnVirtualNetworkTopic() Subscriber[VirtualNetworkTopicMessage] {
+	return newSubscriber[VirtualNetworkTopicMessage](
+		&t.pxGridService,
+		string(TrustSecConfigurationTopicVirtualNetwork),
+		t.WSPubsubService,
+	)
 }
 
-func (t *pxGridTrustSecConfiguration) OnVirtualNetworkTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[VirtualNetworkTopicMessage], error) {
-	topic, err := t.VirtualNetworkTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[VirtualNetworkTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
-}
-
-func (t *pxGridTrustSecConfiguration) OnEgressPolicyTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[EgressPolicyTopicMessage], error) {
-	topic, err := t.EgressPolicyTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[EgressPolicyTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
+func (t *pxGridTrustSecConfiguration) OnEgressPolicyTopic() Subscriber[EgressPolicyTopicMessage] {
+	return newSubscriber[EgressPolicyTopicMessage](
+		&t.pxGridService,
+		string(TrustSecConfigurationTopicEgressPolicy),
+		t.WSPubsubService,
+	)
 }

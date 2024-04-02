@@ -19,7 +19,7 @@ type (
 	}
 
 	PubSubSubscriber interface {
-		Subscribe(ctx context.Context, picker ServiceNodePicker, topic string) (*stomp.Subscription, error)
+		Subscribe(ctx context.Context, picker ServiceNodePickerFactory, topic string) (*stomp.Subscription, error)
 	}
 
 	PubSub interface {
@@ -52,10 +52,10 @@ type (
 	}
 )
 
-func NewPxGridPubSub(ctrl *PxGridConsumer) PubSub {
+func NewPxGridPubSub(ctrl *PxGridConsumer, svc string) PubSub {
 	return &pxGridPubSub{
 		pxGridService: pxGridService{
-			name: "com.cisco.ise.pubsub",
+			name: svc,
 			ctrl: ctrl,
 		},
 		eps: make(map[string]*PubSubEndpoint),
@@ -70,23 +70,32 @@ func (p *pxGridPubSub) WSURL() (string, error) {
 	return p.nodes.GetPropertyString("wsUrl")
 }
 
-func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePicker, topic string) (*stomp.Subscription, error) {
-	node, err := p.nodes.PickNode(picker)
-	if err != nil {
-		return nil, err
-	}
+func (p *pxGridPubSub) Subscribe(ctx context.Context, picker ServiceNodePickerFactory, topic string) (*stomp.Subscription, error) {
+	n := p.orDefaultFactory(picker)(p.nodes)
+	for {
+		node, more, err := n.PickNode()
+		if err != nil {
+			return nil, err
+		}
 
-	ep, err := p.getEndpoint(node)
-	if err != nil {
-		return nil, err
-	}
+		ep, err := p.getEndpoint(node)
+		if err != nil {
+			if !more {
+				return nil, err
+			}
+			continue
+		}
 
-	err = ep.connect(ctx)
-	if err != nil {
-		return nil, err
-	}
+		err = ep.connect(ctx)
+		if err != nil {
+			if !more {
+				return nil, err
+			}
+			continue
+		}
 
-	return ep.stomp.Subscribe(topic, stomp.AckAuto)
+		return ep.stomp.Subscribe(topic, stomp.AckAuto)
+	}
 }
 
 func (p *pxGridPubSub) createEndpoint(wsURL, nodeName, secret string) *PubSubEndpoint {

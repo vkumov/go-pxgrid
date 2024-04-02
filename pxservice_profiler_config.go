@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -23,8 +22,10 @@ type (
 		Topic() (string, error)
 	}
 
+	ProfilerConfigurationTopic string
+
 	ProfilerConfigurationSubscriber interface {
-		OnProfileTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ProfilerTopicMessage], error)
+		OnProfileTopic() Subscriber[ProfilerTopicMessage]
 	}
 
 	ProfilerConfiguration interface {
@@ -32,7 +33,7 @@ type (
 
 		GetProfiles() CallFinalizer[*[]Profile]
 
-		Subscribe() ProfilerConfigurationSubscriber
+		ProfilerConfigurationSubscriber
 
 		Properties() ProfilerConfigurationPropsProvider
 	}
@@ -40,6 +41,10 @@ type (
 	pxGridProfilerConfiguration struct {
 		pxGridService
 	}
+)
+
+const (
+	ProfilerConfigurationTopicProfile ProfilerConfigurationTopic = "topic"
 )
 
 func NewPxGridProfilerConfiguration(ctrl *PxGridConsumer) ProfilerConfiguration {
@@ -83,18 +88,13 @@ func (s *pxGridProfilerConfiguration) WSPubsubService() (string, error) {
 }
 
 func (s *pxGridProfilerConfiguration) Topic() (string, error) {
-	return s.nodes.GetPropertyString("topic")
+	return s.nodes.GetPropertyString(string(ProfilerConfigurationTopicProfile))
 }
 
-func (s *pxGridProfilerConfiguration) Subscribe() ProfilerConfigurationSubscriber {
-	return s
-}
-
-func (s *pxGridProfilerConfiguration) OnProfileTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ProfilerTopicMessage], error) {
-	topic, err := s.Topic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[ProfilerTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
+func (s *pxGridProfilerConfiguration) OnProfileTopic() Subscriber[ProfilerTopicMessage] {
+	return newSubscriber[ProfilerTopicMessage](
+		&s.pxGridService,
+		string(ProfilerConfigurationTopicProfile),
+		s.WSPubsubService,
+	)
 }

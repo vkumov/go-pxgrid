@@ -3,6 +3,7 @@ package gopxgrid
 import (
 	"errors"
 	"math/rand"
+	"slices"
 )
 
 type (
@@ -52,56 +53,104 @@ func (s ServiceNodeSlice) GetPropertyString(name string) (string, error) {
 	return "", ErrPropertyNotString
 }
 
-type ServiceNodePicker func(ServiceNodeSlice) (ServiceNode, error)
+type ServiceNodePicker interface {
+	PickNode() (ServiceNode, bool, error)
+}
 
-func RandomNodePicker() ServiceNodePicker {
-	return func(nodes ServiceNodeSlice) (ServiceNode, error) {
-		if len(nodes) == 0 {
-			return ServiceNode{}, ErrNoNodes
+type ServiceNodePickerFactory func(ServiceNodeSlice) ServiceNodePicker
+
+type predicateNodePicker struct {
+	predicate func(int, ServiceNode) bool
+	nodes     ServiceNodeSlice
+	last      int
+}
+
+func (p *predicateNodePicker) PickNode() (ServiceNode, bool, error) {
+	if len(p.nodes) == 0 {
+		return ServiceNode{}, false, ErrNoNodes
+	}
+
+	for i := p.last; i < len(p.nodes); i++ {
+		if p.predicate(i, p.nodes[i]) {
+			p.last = i
+			return p.nodes[i], i < len(p.nodes)-1, nil
+		}
+	}
+
+	return ServiceNode{}, false, ErrNodeNotFound
+}
+
+type randomNodePicker struct {
+	nodes       ServiceNodeSlice
+	indexesLeft []int
+}
+
+func (p *randomNodePicker) PickNode() (ServiceNode, bool, error) {
+	if len(p.indexesLeft) == 0 {
+		return ServiceNode{}, false, ErrNoNodes
+	}
+
+	index := rand.Intn(len(p.indexesLeft))
+	node := p.nodes[p.indexesLeft[index]]
+	p.indexesLeft = append(p.indexesLeft[:index], p.indexesLeft[index+1:]...)
+
+	return node, len(p.indexesLeft) > 0, nil
+}
+
+func RandomNodePicker() ServiceNodePickerFactory {
+	return func(nodes ServiceNodeSlice) ServiceNodePicker {
+		indexes := make([]int, len(nodes))
+		for i := range indexes {
+			indexes[i] = i
 		}
 
-		return nodes[rand.Intn(len(nodes))], nil
+		return &randomNodePicker{
+			nodes:       nodes,
+			indexesLeft: indexes,
+		}
 	}
 }
 
-func IndexNodePicker(index int) ServiceNodePicker {
-	return func(nodes ServiceNodeSlice) (ServiceNode, error) {
-		if index < 0 || index >= len(nodes) {
-			return ServiceNode{}, ErrNoNodes
+func OrderedNodePicker() ServiceNodePickerFactory {
+	return func(nodes ServiceNodeSlice) ServiceNodePicker {
+		return &predicateNodePicker{
+			predicate: func(int, ServiceNode) bool {
+				return true
+			},
+			nodes: nodes,
 		}
-
-		return nodes[index], nil
 	}
 }
 
-func NameNodePicker(name string) ServiceNodePicker {
-	return func(nodes ServiceNodeSlice) (ServiceNode, error) {
-		for _, node := range nodes {
-			if node.NodeName == name {
-				return node, nil
-			}
+func IndexNodePicker(index ...int) ServiceNodePickerFactory {
+	return func(nodes ServiceNodeSlice) ServiceNodePicker {
+		return &predicateNodePicker{
+			predicate: func(i int, _ ServiceNode) bool {
+				return slices.Contains(index, i)
+			},
+			nodes: nodes,
 		}
-
-		return ServiceNode{}, ErrNodeNotFound
 	}
 }
 
-func PredicateNodePicker(predicate func(ServiceNode) bool) ServiceNodePicker {
-	return func(nodes ServiceNodeSlice) (ServiceNode, error) {
-		for _, node := range nodes {
-			if predicate(node) {
-				return node, nil
-			}
+func NameNodePicker(name ...string) ServiceNodePickerFactory {
+	return func(nodes ServiceNodeSlice) ServiceNodePicker {
+		return &predicateNodePicker{
+			predicate: func(_ int, node ServiceNode) bool {
+				return slices.Contains(name, node.Name)
+			},
+			nodes: nodes,
 		}
-
-		return ServiceNode{}, ErrNodeNotFound
 	}
 }
 
-func (s ServiceNodeSlice) PickNode(picker ServiceNodePicker) (ServiceNode, error) {
-	if picker == nil {
-		return ServiceNode{}, ErrNoNodePicked
+func PredicateNodePicker(predicate func(ServiceNode) bool) ServiceNodePickerFactory {
+	return func(nodes ServiceNodeSlice) ServiceNodePicker {
+		return &predicateNodePicker{
+			predicate: func(_ int, node ServiceNode) bool {
+				return predicate(node)
+			},
+			nodes: nodes,
+		}
 	}
-
-	return picker(s)
 }

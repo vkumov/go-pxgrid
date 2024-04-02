@@ -20,9 +20,11 @@ type (
 		Password string `json:"password"`
 	}
 
+	AccountState string
+
 	AccountActivateResponse struct {
-		AccountState string `json:"accountState"`
-		Version      string `json:"version"`
+		AccountState AccountState `json:"accountState"`
+		Version      string       `json:"version"`
 	}
 
 	ServiceLookupResponse struct {
@@ -32,10 +34,16 @@ type (
 	Controller interface {
 		RESTRequest(ctx context.Context, fullURL string, payload any, ops RESTOptions) (*Response, error)
 		AccountCreate(ctx context.Context) (AccountCreateResponse, error)
-		AccountActivate(ctx context.Context) error
+		AccountActivate(ctx context.Context) (AccountActivateResponse, error)
 		ServiceLookup(ctx context.Context, svc string) (ServiceLookupResponse, error)
 		AccessSecret(ctx context.Context, peerNodeName string) (string, error)
 	}
+)
+
+const (
+	AccountStatePending  AccountState = "PENDING"
+	AccountStateDisabled AccountState = "DISABLED"
+	AccountStateEnabled  AccountState = "ENABLED"
 )
 
 func (c *PxGridConsumer) Control() Controller {
@@ -67,25 +75,27 @@ func (c *PxGridConsumer) AccountCreate(ctx context.Context) (AccountCreateRespon
 	return *(res.Result.(*AccountCreateResponse)), nil
 }
 
-func (c *PxGridConsumer) AccountActivate(ctx context.Context) error {
+func (c *PxGridConsumer) AccountActivate(ctx context.Context) (AccountActivateResponse, error) {
 	payload := map[string]interface{}{}
 	if c.cfg.Description != "" {
 		payload["description"] = c.cfg.Description
 	}
 
-	res, err := c.controlRest(ctx, "AccountActivate", payload, RESTOptions{})
+	res, err := c.controlRest(ctx, "AccountActivate", payload, RESTOptions{
+		result: &AccountActivateResponse{},
+	})
 	if err != nil {
-		return err
+		return AccountActivateResponse{}, err
 	}
 
 	if res.StatusCode == 401 {
-		return ErrActivateUnauthorized
+		return AccountActivateResponse{}, ErrActivateUnauthorized
 	}
 	if res.StatusCode > 299 {
-		return fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		return AccountActivateResponse{}, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
-	return nil
+	return *(res.Result.(*AccountActivateResponse)), nil
 }
 
 func (c *PxGridConsumer) ServiceLookup(ctx context.Context, svc string) (ServiceLookupResponse, error) {

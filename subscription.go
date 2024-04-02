@@ -70,8 +70,111 @@ func translator[T any](in chan *stomp.Message) chan *Message[T] {
 	return out
 }
 
-func subscribe[T any](ctx context.Context, s PubSubSubscriber, picker ServiceNodePicker, topic string) (*Subscription[T], error) {
-	sub, err := s.Subscribe(ctx, picker, topic)
+type Subscriber[T any] interface {
+	WithServiceNodePicker(picker ServiceNodePickerFactory) Subscriber[T]
+	WithPubSubNodePicker(picker ServiceNodePickerFactory) Subscriber[T]
+	WithExplicitPubSub(pubsub PubSub) Subscriber[T]
+	Subscribe(ctx context.Context) (*Subscription[T], error)
+}
+
+type subscriber[T any] struct {
+	svc           *pxGridService
+	topicProperty string
+	pubsub        PubSub
+	pubsubGetter  func() (string, error)
+
+	svcNodePicker    ServiceNodePickerFactory
+	pubSubNodePicker ServiceNodePickerFactory
+}
+
+func newSubscriber[T any](svc *pxGridService, topic string, pubsubGetter func() (string, error)) Subscriber[T] {
+	return &subscriber[T]{
+		svc:           svc,
+		topicProperty: topic,
+		pubsubGetter:  pubsubGetter,
+	}
+}
+
+func (s *subscriber[T]) WithExplicitPubSub(pubsub PubSub) Subscriber[T] {
+	s.pubsub = pubsub
+	return s
+}
+
+func (s *subscriber[T]) WithServiceNodePicker(picker ServiceNodePickerFactory) Subscriber[T] {
+	s.svcNodePicker = picker
+	return s
+}
+
+func (s *subscriber[T]) WithPubSubNodePicker(picker ServiceNodePickerFactory) Subscriber[T] {
+	s.pubSubNodePicker = picker
+	return s
+}
+
+func (s *subscriber[T]) getPubSubServiceName(ctx context.Context) (string, error) {
+	if s.pubsubGetter != nil {
+		return s.pubsubGetter()
+	}
+
+	psNameRaw, err := s.svc.FindProperty(ctx, "wsPubsubService", s.svcNodePicker)
+	if err != nil {
+		return "", err
+	}
+
+	pubSubServiceName, ok := psNameRaw.(string)
+	if !ok || pubSubServiceName == "" {
+		return "", ErrPropertyNotFound
+	}
+
+	return pubSubServiceName, nil
+}
+
+func (s *subscriber[T]) getTopic(ctx context.Context) (string, error) {
+	topicRaw, err := s.svc.FindProperty(ctx, s.topicProperty, s.svcNodePicker)
+	if err != nil {
+		return "", err
+	}
+
+	topic, ok := topicRaw.(string)
+	if !ok || topic == "" {
+		return "", ErrPropertyNotFound
+	}
+
+	return topic, nil
+}
+
+func (s *subscriber[T]) populatePubSub(ctx context.Context) error {
+	if s.pubsub != nil {
+		return nil
+	}
+
+	pubSubServiceName, err := s.getPubSubServiceName(ctx)
+	if err != nil {
+		return err
+	}
+
+	s.pubsub = s.svc.ctrl.PubSub(pubSubServiceName)
+	return nil
+}
+
+func (s *subscriber[T]) Subscribe(ctx context.Context) (*Subscription[T], error) {
+	if s.svcNodePicker == nil {
+		s.svcNodePicker = OrderedNodePicker()
+	}
+
+	if err := s.populatePubSub(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := s.pubsub.CheckNodes(ctx); err != nil {
+		return nil, err
+	}
+
+	topic, err := s.getTopic(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := s.pubsub.Subscribe(ctx, s.pubSubNodePicker, topic)
 	if err != nil {
 		return nil, err
 	}

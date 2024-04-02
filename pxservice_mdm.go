@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -35,8 +34,10 @@ type (
 		EndpointTopic() (string, error)
 	}
 
+	MDMTopic string
+
 	MDMSubscriber interface {
-		OnEndpointTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[MDMEndpoint], error)
+		OnEndpointTopic() Subscriber[MDMEndpoint]
 	}
 
 	MDM interface {
@@ -47,7 +48,7 @@ type (
 		GetEndpointsByType(endpointType MDMEndpointType) CallFinalizer[*[]MDMEndpoint]
 		GetEndpointsByOsType(osType MDMOSType) CallFinalizer[*[]MDMEndpoint]
 
-		Subscribe() MDMSubscriber
+		MDMSubscriber
 
 		Properties() MDMPropsProvider
 	}
@@ -65,6 +66,8 @@ const (
 	MDMOSTypeAndroid MDMOSType = "ANDROID"
 	MDMOSTypeIOS     MDMOSType = "IOS"
 	MDMOSTypeWindows MDMOSType = "WINDOWS"
+
+	MDMTopicEndpoint MDMTopic = "endpointTopic"
 )
 
 func NewPxGridMDM(ctrl *PxGridConsumer) MDM {
@@ -169,18 +172,13 @@ func (s *pxGridMDM) WSPubsubService() (string, error) {
 }
 
 func (s *pxGridMDM) EndpointTopic() (string, error) {
-	return s.nodes.GetPropertyString("endpointTopic")
+	return s.nodes.GetPropertyString(string(MDMTopicEndpoint))
 }
 
-func (s *pxGridMDM) Subscribe() MDMSubscriber {
-	return s
-}
-
-func (s *pxGridMDM) OnEndpointTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[MDMEndpoint], error) {
-	topic, err := s.EndpointTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[MDMEndpoint](ctx, s.ctrl.PubSub(), nodePicker, topic)
+func (s *pxGridMDM) OnEndpointTopic() Subscriber[MDMEndpoint] {
+	return newSubscriber[MDMEndpoint](
+		&s.pxGridService,
+		string(MDMTopicEndpoint),
+		s.WSPubsubService,
+	)
 }

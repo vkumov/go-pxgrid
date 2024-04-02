@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -74,8 +73,10 @@ type (
 		StatusTopic() (string, error)
 	}
 
-	ANCSubscriber interface {
-		OnStatusTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCOperationStatus], error)
+	ANCConfigTopic string
+
+	ANCConfigSubscriber interface {
+		OnStatusTopic() Subscriber[ANCOperationStatus]
 	}
 
 	ANCConfig interface {
@@ -100,7 +101,7 @@ type (
 
 		GetOperationStatus(operationID string) CallFinalizer[*ANCOperationStatus]
 
-		Subscribe() ANCSubscriber
+		ANCConfigSubscriber
 
 		Properties() ANCConfigPropsProvider
 	}
@@ -108,6 +109,10 @@ type (
 	pxGridANC struct {
 		pxGridService
 	}
+)
+
+const (
+	ANCConfigTopicStatus ANCConfigTopic = "statusTopic"
 )
 
 func NewPxGridANCConfig(ctrl *PxGridConsumer) ANCConfig {
@@ -372,18 +377,13 @@ func (a *pxGridANC) WSPubsubService() (string, error) {
 }
 
 func (a *pxGridANC) StatusTopic() (string, error) {
-	return a.nodes.GetPropertyString("statusTopic")
+	return a.nodes.GetPropertyString(string(ANCConfigTopicStatus))
 }
 
-func (a *pxGridANC) Subscribe() ANCSubscriber {
-	return a
-}
-
-func (a *pxGridANC) OnStatusTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[ANCOperationStatus], error) {
-	topic, err := a.StatusTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[ANCOperationStatus](ctx, a.ctrl.PubSub(), nodePicker, topic)
+func (a *pxGridANC) OnStatusTopic() Subscriber[ANCOperationStatus] {
+	return newSubscriber[ANCOperationStatus](
+		&a.pxGridService,
+		string(ANCConfigTopicStatus),
+		a.WSPubsubService,
+	)
 }

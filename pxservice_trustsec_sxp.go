@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -25,8 +24,10 @@ type (
 		BindingTopic() (string, error)
 	}
 
+	TrustSecSXPTopic string
+
 	TrustSecSXPSubscriber interface {
-		OnBindingTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[TrustSecSXPBindingTopicMessage], error)
+		OnBindingTopic() Subscriber[TrustSecSXPBindingTopicMessage]
 	}
 
 	TrustSecSXP interface {
@@ -34,7 +35,7 @@ type (
 
 		GetBindings(filter any) CallFinalizer[*[]TrustSecSXPBinding]
 
-		Subscribe() TrustSecSXPSubscriber
+		TrustSecSXPSubscriber
 
 		Properties() TrustSecSXPPropsProvider
 	}
@@ -42,6 +43,10 @@ type (
 	pxGridTrustSecSXP struct {
 		pxGridService
 	}
+)
+
+const (
+	TrustSecSXPTopicBinding TrustSecSXPTopic = "bindingTopic"
 )
 
 func NewPxGridTrustSecSXP(ctrl *PxGridConsumer) TrustSecSXP {
@@ -66,7 +71,7 @@ func (t *pxGridTrustSecSXP) WSPubsubService() (string, error) {
 }
 
 func (t *pxGridTrustSecSXP) BindingTopic() (string, error) {
-	return t.nodes.GetPropertyString("bindingTopic")
+	return t.nodes.GetPropertyString(string(TrustSecSXPTopicBinding))
 }
 
 func (t *pxGridTrustSecSXP) GetBindings(filter any) CallFinalizer[*[]TrustSecSXPBinding] {
@@ -95,15 +100,10 @@ func (t *pxGridTrustSecSXP) GetBindings(filter any) CallFinalizer[*[]TrustSecSXP
 	)
 }
 
-func (t *pxGridTrustSecSXP) Subscribe() TrustSecSXPSubscriber {
-	return t
-}
-
-func (t *pxGridTrustSecSXP) OnBindingTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[TrustSecSXPBindingTopicMessage], error) {
-	topic, err := t.BindingTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[TrustSecSXPBindingTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
+func (t *pxGridTrustSecSXP) OnBindingTopic() Subscriber[TrustSecSXPBindingTopicMessage] {
+	return newSubscriber[TrustSecSXPBindingTopicMessage](
+		&t.pxGridService,
+		string(TrustSecSXPTopicBinding),
+		t.WSPubsubService,
+	)
 }

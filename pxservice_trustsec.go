@@ -1,9 +1,5 @@
 package gopxgrid
 
-import (
-	"context"
-)
-
 type (
 	Policy struct {
 		SourceSGT                  int    `json:"sourceSgt"`
@@ -36,14 +32,16 @@ type (
 		PolicyDownloadTopic() (string, error)
 	}
 
+	TrustSecTopic string
+
 	TrustSecSubscriber interface {
-		OnPolicyDownloadTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[PolicyDownloadTopicMessage], error)
+		OnPolicyDownloadTopic() Subscriber[PolicyDownloadTopicMessage]
 	}
 
 	TrustSec interface {
 		PxGridService
 
-		Subscribe() TrustSecSubscriber
+		TrustSecSubscriber
 
 		Properties() TrustSecPropsProvider
 	}
@@ -56,6 +54,8 @@ type (
 const (
 	PolicyDownloadStatusSuccess PolicyDownloadStatus = "SUCCESS"
 	PolicyDownloadStatusFailure PolicyDownloadStatus = "FAILURE"
+
+	TrustSecTopicPolicyDownload TrustSecTopic = "policyDownloadTopic"
 )
 
 func NewPxGridTrustSec(ctrl *PxGridConsumer) TrustSec {
@@ -76,18 +76,13 @@ func (t *pxGridTrustSec) WSPubsubService() (string, error) {
 }
 
 func (t *pxGridTrustSec) PolicyDownloadTopic() (string, error) {
-	return t.nodes.GetPropertyString("policyDownloadTopic")
+	return t.nodes.GetPropertyString(string(TrustSecTopicPolicyDownload))
 }
 
-func (t *pxGridTrustSec) Subscribe() TrustSecSubscriber {
-	return t
-}
-
-func (t *pxGridTrustSec) OnPolicyDownloadTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[PolicyDownloadTopicMessage], error) {
-	topic, err := t.PolicyDownloadTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[PolicyDownloadTopicMessage](ctx, t.ctrl.PubSub(), nodePicker, topic)
+func (t *pxGridTrustSec) OnPolicyDownloadTopic() Subscriber[PolicyDownloadTopicMessage] {
+	return newSubscriber[PolicyDownloadTopicMessage](
+		&t.pxGridService,
+		string(TrustSecTopicPolicyDownload),
+		t.WSPubsubService,
+	)
 }

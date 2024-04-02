@@ -51,3 +51,63 @@ type PxGridConfig struct {
 	DNS         DNSConfig
 	Logger      stomp.Logger
 }
+
+func NewPxGridConfig() *PxGridConfig {
+	return &PxGridConfig{
+		DNS: DNSConfig{
+			FamilyStrategy: DefaultINETFamilyStrategy,
+		},
+	}
+}
+
+func (c *PxGridConfig) AddHost(host string, controlPort int) *PxGridConfig {
+	c.Hosts = append(c.Hosts, Host{
+		Host:        host,
+		ControlPort: controlPort,
+	})
+	return c
+}
+
+func (c *PxGridConfig) SetAuth(username, password string) *PxGridConfig {
+	c.Auth = AuthConfig{
+		Username: username,
+		Password: password,
+	}
+	return c
+}
+
+func (c *PxGridConfig) SetNodeName(name string) *PxGridConfig {
+	c.NodeName = name
+	return c
+}
+
+func (c *PxGridConfig) SetDescription(desc string) *PxGridConfig {
+	c.Description = desc
+	return c
+}
+
+func (c *PxGridConfig) SetLogger(logger stomp.Logger) *PxGridConfig {
+	c.Logger = logger
+	return c
+}
+
+func (c *PxGridConfig) SetClientCertificate(cert *tls.Certificate) *PxGridConfig {
+	c.TLS.ClientCertificate = cert
+	return c
+}
+
+func (c *PxGridConfig) SetInsecureTLS(insecure bool) *PxGridConfig {
+	c.TLS.InsecureTLS = insecure
+	return c
+}
+
+func (c *PxGridConfig) SetCA(ca []x509.Certificate) *PxGridConfig {
+	c.TLS.CA = ca
+	return c
+}
+
+func (c *PxGridConfig) SetDNS(server string, family INETFamilyStrategy) *PxGridConfig {
+	c.DNS.Server = server
+	c.DNS.FamilyStrategy = family
+	return c
+}

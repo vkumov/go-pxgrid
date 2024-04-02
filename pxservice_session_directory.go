@@ -1,7 +1,6 @@
 package gopxgrid
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -97,10 +96,12 @@ type (
 		GroupTopic() (string, error)
 	}
 
+	SessionDirectoryTopic string
+
 	SessionDirectorySubscriber interface {
-		OnSessionTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error)
-		OnSessionTopicAll(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error)
-		OnGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[GroupTopicMessage], error)
+		OnSessionTopic() Subscriber[SessionTopicMessage]
+		OnSessionTopicAll() Subscriber[SessionTopicMessage]
+		OnGroupTopic() Subscriber[GroupTopicMessage]
 	}
 
 	SessionDirectory interface {
@@ -113,7 +114,7 @@ type (
 		GetUserGroups(filter any) CallFinalizer[*[]Group]
 		GetUserGroupByUserName(userName string) CallFinalizer[*[]Group]
 
-		Subscribe() SessionDirectorySubscriber
+		SessionDirectorySubscriber
 
 		Properties() SessionDirectoryPropsProvider
 	}
@@ -134,6 +135,10 @@ const (
 	GroupTypeIdentity                   GroupType = "IDENTITY"
 	GroupTypeExternal                   GroupType = "EXTERNAL"
 	GroupTypeInterestingActiveDirectory GroupType = "INTERESTING_ACTIVE_DIRECTORY"
+
+	SessionDirectoryTopicSession    SessionDirectoryTopic = "sessionTopic"
+	SessionDirectoryTopicSessionAll SessionDirectoryTopic = "sessionTopicAll"
+	SessionDirectoryTopicGroup      SessionDirectoryTopic = "groupTopic"
 )
 
 func NewPxGridSessionDirectory(ctrl *PxGridConsumer) SessionDirectory {
@@ -292,44 +297,37 @@ func (s *pxGridSessionDirectory) WSPubsubService() (string, error) {
 }
 
 func (s *pxGridSessionDirectory) SessionTopic() (string, error) {
-	return s.nodes.GetPropertyString("sessionTopic")
+	return s.nodes.GetPropertyString(string(SessionDirectoryTopicSession))
 }
 
 func (s *pxGridSessionDirectory) SessionTopicAll() (string, error) {
-	return s.nodes.GetPropertyString("sessionTopicAll")
+	return s.nodes.GetPropertyString(string(SessionDirectoryTopicSessionAll))
 }
 
 func (s *pxGridSessionDirectory) GroupTopic() (string, error) {
-	return s.nodes.GetPropertyString("groupTopic")
+	return s.nodes.GetPropertyString(string(SessionDirectoryTopicGroup))
 }
 
-func (s *pxGridSessionDirectory) Subscribe() SessionDirectorySubscriber {
-	return s
+func (s *pxGridSessionDirectory) OnSessionTopic() Subscriber[SessionTopicMessage] {
+	return newSubscriber[SessionTopicMessage](
+		&s.pxGridService,
+		string(SessionDirectoryTopicSession),
+		s.WSPubsubService,
+	)
 }
 
-func (s *pxGridSessionDirectory) OnSessionTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error) {
-	topic, err := s.SessionTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
+func (s *pxGridSessionDirectory) OnSessionTopicAll() Subscriber[SessionTopicMessage] {
+	return newSubscriber[SessionTopicMessage](
+		&s.pxGridService,
+		string(SessionDirectoryTopicSessionAll),
+		s.WSPubsubService,
+	)
 }
 
-func (s *pxGridSessionDirectory) OnSessionTopicAll(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[SessionTopicMessage], error) {
-	topic, err := s.SessionTopicAll()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[SessionTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
-}
-
-func (s *pxGridSessionDirectory) OnGroupTopic(ctx context.Context, nodePicker ServiceNodePicker) (*Subscription[GroupTopicMessage], error) {
-	topic, err := s.GroupTopic()
-	if err != nil {
-		return nil, err
-	}
-
-	return subscribe[GroupTopicMessage](ctx, s.ctrl.PubSub(), nodePicker, topic)
+func (s *pxGridSessionDirectory) OnGroupTopic() Subscriber[GroupTopicMessage] {
+	return newSubscriber[GroupTopicMessage](
+		&s.pxGridService,
+		string(SessionDirectoryTopicGroup),
+		s.WSPubsubService,
+	)
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"sync"
 )
 
 type PxGridConsumer struct {
@@ -15,17 +16,20 @@ type PxGridConsumer struct {
 	endpointAsset    EndpointAsset
 	mdm              MDM
 	profilerConfig   ProfilerConfiguration
-	pubsub           PubSub
 	radiusFailure    RadiusFailure
 	sessionDirectory SessionDirectory
 	systemHealth     SystemHealth
 	trustsecConfig   TrustSecConfiguration
 	trustsecSxp      TrustSecSXP
 	trustsec         TrustSec
+
+	pubsubs     map[string]PubSub
+	pubsubMutex sync.RWMutex
 }
 
 var (
-	ErrNoHosts = fmt.Errorf("no hosts available")
+	ErrNoHosts            = errors.New("no hosts available")
+	ErrServiceUnavailable = errors.New("service unavailable")
 )
 
 func mergeWithDefaultConfig(cfg *PxGridConfig) *PxGridConfig {
@@ -58,7 +62,6 @@ func NewPxGridConsumer(cfg *PxGridConfig) (*PxGridConsumer, error) {
 	c.endpointAsset = NewPxGridEndpointAsset(c)
 	c.mdm = NewPxGridMDM(c)
 	c.profilerConfig = NewPxGridProfilerConfiguration(c)
-	c.pubsub = NewPxGridPubSub(c)
 	c.radiusFailure = NewPxGridRadiusFailure(c)
 	c.sessionDirectory = NewPxGridSessionDirectory(c)
 	c.systemHealth = NewPxGridSystemHealth(c)
@@ -142,8 +145,17 @@ func (c *PxGridConsumer) ProfilerConfiguration() ProfilerConfiguration {
 	return c.profilerConfig
 }
 
-func (c *PxGridConsumer) PubSub() PubSub {
-	return c.pubsub
+func (c *PxGridConsumer) PubSub(service string) PubSub {
+	c.pubsubMutex.Lock()
+	defer c.pubsubMutex.Unlock()
+
+	svc, ok := c.pubsubs[service]
+	if !ok {
+		svc = NewPxGridPubSub(c, service)
+		c.pubsubs[service] = svc
+	}
+
+	return svc
 }
 
 func (c *PxGridConsumer) RadiusFailure() RadiusFailure {
