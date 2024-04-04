@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"log/slog"
 	"net"
 	"net/http"
 	"sync"
@@ -44,7 +43,7 @@ type (
 
 		readerBuffer []byte
 		writeBuffer  []byte
-		log          *slog.Logger
+		log          Logger
 
 		l sync.RWMutex
 	}
@@ -233,7 +232,7 @@ func (e *PubSubEndpoint) connect(ctx context.Context) (err error) {
 	e.log.Debug("STOMP connect")
 	e.stomp, err = stomp.Connect(e,
 		stomp.ConnOpt.HeartBeat(0, 0),
-		stomp.ConnOpt.Logger(fromSlogLogger(e.log)))
+		stomp.ConnOpt.Logger(fromLogger(e.log)))
 	if err != nil {
 		return errors.Join(err, e.ws.Close())
 	}

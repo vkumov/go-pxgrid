@@ -127,7 +127,7 @@ func pxGridConfigFromFlags() *gopxgrid.PxGridConfig {
 
 func main() {
 	config := pxGridConfigFromFlags()
-	config.SetLogger(logger)
+	config.SetLogger(gopxgrid.FromSlog(logger))
 
 	logger.Info("Connecting to pxGrid", slog.Any("config", config))
 

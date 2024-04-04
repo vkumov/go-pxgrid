@@ -3,7 +3,6 @@ package gopxgrid
 import (
 	"context"
 	"fmt"
-	"log/slog"
 )
 
 var (
@@ -39,7 +38,7 @@ type pxGridService struct {
 	name  string
 	nodes ServiceNodeSlice
 	ctrl  *PxGridConsumer
-	log   *slog.Logger
+	log   Logger
 }
 
 // Name returns the name of the service

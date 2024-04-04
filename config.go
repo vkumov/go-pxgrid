@@ -3,7 +3,6 @@ package gopxgrid
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"log/slog"
 )
 
 type INETFamilyStrategy int
@@ -46,7 +45,7 @@ type PxGridConfig struct {
 	Description string
 	TLS         TLSConfig
 	DNS         DNSConfig
-	Logger      *slog.Logger
+	Logger      Logger
 }
 
 func NewPxGridConfig() *PxGridConfig {
@@ -83,7 +82,7 @@ func (c *PxGridConfig) SetDescription(desc string) *PxGridConfig {
 	return c
 }
 
-func (c *PxGridConfig) SetLogger(logger *slog.Logger) *PxGridConfig {
+func (c *PxGridConfig) SetLogger(logger Logger) *PxGridConfig {
 	c.Logger = logger
 	return c
 }

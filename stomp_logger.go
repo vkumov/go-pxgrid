@@ -2,16 +2,15 @@ package gopxgrid
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/go-stomp/stomp/v3"
 )
 
 type stompLogger struct {
-	*slog.Logger
+	Logger
 }
 
-func fromSlogLogger(logger *slog.Logger) stomp.Logger {
+func fromLogger(logger Logger) stomp.Logger {
 	return &stompLogger{logger}
 }
 

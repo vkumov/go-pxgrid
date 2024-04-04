@@ -43,7 +43,7 @@ func mergeWithDefaultConfig(cfg *PxGridConfig) *PxGridConfig {
 	}
 
 	if cfg.Logger == nil {
-		cfg.Logger = slog.Default()
+		cfg.Logger = FromSlog(slog.Default())
 	}
 
 	return cfg
