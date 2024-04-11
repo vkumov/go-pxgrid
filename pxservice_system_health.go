@@ -42,12 +42,16 @@ type (
 	}
 )
 
+const (
+	SystemHealthServiceName = "com.cisco.ise.system"
+)
+
 func NewPxGridSystemHealth(ctrl *PxGridConsumer) SystemHealth {
 	return &pxGridSystemHealth{
 		pxGridService{
-			name: "com.cisco.ise.system",
+			name: SystemHealthServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.system"),
+			log:  ctrl.cfg.Logger.With("svc", SystemHealthServiceName),
 		},
 	}
 }

@@ -81,14 +81,16 @@ type (
 
 const (
 	RadiusFailureTopicFailure RadiusFailureTopic = "failureTopic"
+
+	RadiusFailureServiceName = "com.cisco.ise.radius"
 )
 
 func NewPxGridRadiusFailure(ctrl *PxGridConsumer) RadiusFailure {
 	return &pxGridRadiusFailure{
 		pxGridService{
-			name: "com.cisco.ise.radius",
+			name: RadiusFailureServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.radius"),
+			log:  ctrl.cfg.Logger.With("svc", RadiusFailureServiceName),
 		},
 	}
 }

@@ -139,14 +139,16 @@ const (
 	SessionDirectoryTopicSession    SessionDirectoryTopic = "sessionTopic"
 	SessionDirectoryTopicSessionAll SessionDirectoryTopic = "sessionTopicAll"
 	SessionDirectoryTopicGroup      SessionDirectoryTopic = "groupTopic"
+
+	SessionDirectoryServiceName = "com.cisco.ise.session"
 )
 
 func NewPxGridSessionDirectory(ctrl *PxGridConsumer) SessionDirectory {
 	return &pxGridSessionDirectory{
 		pxGridService{
-			name: "com.cisco.ise.session",
+			name: SessionDirectoryServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.session"),
+			log:  ctrl.cfg.Logger.With("svc", SessionDirectoryServiceName),
 		},
 	}
 }

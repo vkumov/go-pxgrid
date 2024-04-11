@@ -167,14 +167,16 @@ const (
 	TrustSecConfigurationTopicSecurityGroupVNVlan TrustSecConfigurationTopic = "securityGroupVnVlanTopic"
 	TrustSecConfigurationTopicVirtualNetwork      TrustSecConfigurationTopic = "virtualnetworkTopic"
 	TrustSecConfigurationTopicEgressPolicy        TrustSecConfigurationTopic = "egressPolicyTopic"
+
+	TrustSecConfigurationServiceName = "com.cisco.ise.config.trustsec"
 )
 
 func NewPxGridTrustSecConfiguration(ctrl *PxGridConsumer) TrustSecConfiguration {
 	return &pxGridTrustSecConfiguration{
 		pxGridService{
-			name: "com.cisco.ise.config.trustsec",
+			name: TrustSecConfigurationServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.config.trustsec"),
+			log:  ctrl.cfg.Logger.With("svc", TrustSecConfigurationServiceName),
 		},
 	}
 }

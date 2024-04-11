@@ -68,14 +68,16 @@ const (
 	MDMOSTypeWindows MDMOSType = "WINDOWS"
 
 	MDMTopicEndpoint MDMTopic = "endpointTopic"
+
+	MDMServiceName = "com.cisco.ise.mdm"
 )
 
 func NewPxGridMDM(ctrl *PxGridConsumer) MDM {
 	return &pxGridMDM{
 		pxGridService{
-			name: "com.cisco.ise.mdm",
+			name: MDMServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.mdm"),
+			log:  ctrl.cfg.Logger.With("svc", MDMServiceName),
 		},
 	}
 }

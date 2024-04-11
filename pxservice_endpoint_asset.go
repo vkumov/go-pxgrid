@@ -53,14 +53,16 @@ type (
 
 const (
 	EndpointAssetTopicAsset EndpointAssetTopic = "assetTopic"
+
+	EndpointAssetServiceName = "com.cisco.endpoint.asset"
 )
 
 func NewPxGridEndpointAsset(ctrl *PxGridConsumer) EndpointAsset {
 	return &pxGridEndpointAsset{
 		pxGridService{
-			name: "com.cisco.endpoint.asset",
+			name: EndpointAssetServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.endpoint.asset"),
+			log:  ctrl.cfg.Logger.With("svc", EndpointAssetServiceName),
 		},
 	}
 }

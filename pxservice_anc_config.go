@@ -113,14 +113,16 @@ type (
 
 const (
 	ANCConfigTopicStatus ANCConfigTopic = "statusTopic"
+
+	ANCConfigServiceName = "com.cisco.ise.config.anc"
 )
 
 func NewPxGridANCConfig(ctrl *PxGridConsumer) ANCConfig {
 	return &pxGridANC{
 		pxGridService: pxGridService{
-			name: "com.cisco.ise.config.anc",
+			name: ANCConfigServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.config.anc"),
+			log:  ctrl.cfg.Logger.With("svc", ANCConfigServiceName),
 		},
 	}
 }

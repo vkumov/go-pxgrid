@@ -47,14 +47,16 @@ type (
 
 const (
 	TrustSecSXPTopicBinding TrustSecSXPTopic = "bindingTopic"
+
+	TrustSecSXPServiceName = "com.cisco.ise.sxp"
 )
 
 func NewPxGridTrustSecSXP(ctrl *PxGridConsumer) TrustSecSXP {
 	return &pxGridTrustSecSXP{
 		pxGridService{
-			name: "com.cisco.ise.sxp",
+			name: TrustSecSXPServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.sxp"),
+			log:  ctrl.cfg.Logger.With("svc", TrustSecSXPServiceName),
 		},
 	}
 }

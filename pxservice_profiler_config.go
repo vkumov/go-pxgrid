@@ -45,14 +45,16 @@ type (
 
 const (
 	ProfilerConfigurationTopicProfile ProfilerConfigurationTopic = "topic"
+
+	ProfilerConfigurationServiceName = "com.cisco.ise.config.profiler"
 )
 
 func NewPxGridProfilerConfiguration(ctrl *PxGridConsumer) ProfilerConfiguration {
 	return &pxGridProfilerConfiguration{
 		pxGridService{
-			name: "com.cisco.ise.config.profiler",
+			name: ProfilerConfigurationServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.config.profiler"),
+			log:  ctrl.cfg.Logger.With("svc", ProfilerConfigurationServiceName),
 		},
 	}
 }

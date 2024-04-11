@@ -56,14 +56,16 @@ const (
 	PolicyDownloadStatusFailure PolicyDownloadStatus = "FAILURE"
 
 	TrustSecTopicPolicyDownload TrustSecTopic = "policyDownloadTopic"
+
+	TrustSecServiceName = "com.cisco.ise.trustsec"
 )
 
 func NewPxGridTrustSec(ctrl *PxGridConsumer) TrustSec {
 	return &pxGridTrustSec{
 		pxGridService{
-			name: "com.cisco.ise.trustsec",
+			name: TrustSecServiceName,
 			ctrl: ctrl,
-			log:  ctrl.cfg.Logger.With("svc", "com.cisco.ise.trustsec"),
+			log:  ctrl.cfg.Logger.With("svc", TrustSecServiceName),
 		},
 	}
 }
