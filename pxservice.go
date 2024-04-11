@@ -24,6 +24,7 @@ type SupportedRESTCallDetails struct {
 
 type PxGridService interface {
 	Name() string
+	Nodes() []ServiceNode
 	Lookup(ctx context.Context) error
 	UpdateSecrets(ctx context.Context) error
 	CheckNodes(ctx context.Context) error
@@ -177,6 +178,13 @@ func (s *pxGridService) FindProperty(ctx context.Context, property string, nodeP
 	}
 
 	return nil, fmt.Errorf("property %s not found", property)
+}
+
+// Nodes returns copy the service nodes
+func (s *pxGridService) Nodes() []ServiceNode {
+	nodes := make([]ServiceNode, len(s.nodes))
+	copy(nodes, s.nodes)
+	return nodes
 }
 
 func (s *pxGridService) On(topicProperty string) Subscriber[any] {
