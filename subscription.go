@@ -11,7 +11,8 @@ type (
 	Subscription[T any] struct {
 		*stomp.Subscription
 
-		C chan *Message[T]
+		C             chan *Message[T]
+		PubSubService string
 	}
 
 	Message[T any] struct {
@@ -184,7 +185,8 @@ func (s *subscriber[T]) Subscribe(ctx context.Context) (*Subscription[T], error)
 	s.svc.log.Debug("STOMP Subscribed to topic", "topic", topic)
 
 	return &Subscription[T]{
-		Subscription: sub,
-		C:            translator[T](sub.C),
+		Subscription:  sub,
+		C:             translator[T](sub.C),
+		PubSubService: s.pubsub.Name(),
 	}, nil
 }
