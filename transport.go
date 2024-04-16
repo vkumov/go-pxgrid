@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/go-resty/resty/v2"
@@ -56,16 +55,15 @@ func newTransport(cfg *PxGridConfig) *transport {
 
 	if s.dns.Server != "" {
 		host := s.dns.Server
-		if strings.Index(host, ":") == -1 {
-			host = host + ":53"
-		}
-
-		s.resolver = &net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				d := net.Dialer{}
-				return d.DialContext(ctx, "udp", host)
-			},
+		ip, err := ParseDNSHost(host)
+		if err == nil {
+			s.resolver = &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					d := net.Dialer{}
+					return d.DialContext(ctx, "udp", ip.String())
+				},
+			}
 		}
 	}
 
