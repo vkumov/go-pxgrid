@@ -28,10 +28,14 @@ type (
 		OnProfileTopic() Subscriber[ProfilerTopicMessage]
 	}
 
+	ProfilerConfigurationRest interface {
+		GetProfiles() CallFinalizer[*[]Profile]
+	}
+
 	ProfilerConfiguration interface {
 		PxGridService
 
-		GetProfiles() CallFinalizer[*[]Profile]
+		Rest() ProfilerConfigurationRest
 
 		ProfilerConfigurationSubscriber
 
@@ -57,6 +61,10 @@ func NewPxGridProfilerConfiguration(ctrl *PxGridConsumer) ProfilerConfiguration 
 			log:  ctrl.cfg.Logger.With("svc", ProfilerConfigurationServiceName),
 		},
 	}
+}
+
+func (s *pxGridProfilerConfiguration) Rest() ProfilerConfigurationRest {
+	return s
 }
 
 // GetProfiles retrieves the list of profiles from the profiler configuration service

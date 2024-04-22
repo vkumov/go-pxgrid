@@ -104,15 +104,19 @@ type (
 		OnGroupTopic() Subscriber[GroupTopicMessage]
 	}
 
-	SessionDirectory interface {
-		PxGridService
-
+	SessionDirectoryRest interface {
 		GetSessions(startTimestamp string, filter any) CallFinalizer[*[]Session]
 		GetSessionsForRecovery(startTimestamp, endTimestamp string) CallFinalizer[*[]Session]
 		GetSessionByIPAddress(ipAddress string) CallFinalizer[*Session]
 		GetSessionByMacAddress(macAddress string) CallFinalizer[*Session]
 		GetUserGroups(filter any) CallFinalizer[*[]Group]
 		GetUserGroupByUserName(userName string) CallFinalizer[*[]Group]
+	}
+
+	SessionDirectory interface {
+		PxGridService
+
+		Rest() SessionDirectoryRest
 
 		SessionDirectorySubscriber
 
@@ -151,6 +155,10 @@ func NewPxGridSessionDirectory(ctrl *PxGridConsumer) SessionDirectory {
 			log:  ctrl.cfg.Logger.With("svc", SessionDirectoryServiceName),
 		},
 	}
+}
+
+func (s *pxGridSessionDirectory) Rest() SessionDirectoryRest {
+	return s
 }
 
 // GetSessions retrieves the sessions from the session directory service

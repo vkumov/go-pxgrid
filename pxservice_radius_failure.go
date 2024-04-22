@@ -63,11 +63,15 @@ type (
 		OnFailureTopic() Subscriber[FailureTopicMessage]
 	}
 
+	RadiusFailureRest interface {
+		GetFailures() CallFinalizer[*[]Failure]
+		GetFailureByID(id string) CallFinalizer[*Failure]
+	}
+
 	RadiusFailure interface {
 		PxGridService
 
-		GetFailures() CallFinalizer[*[]Failure]
-		GetFailureByID(id string) CallFinalizer[*Failure]
+		Rest() RadiusFailureRest
 
 		RadiusFailureSubscriber
 
@@ -93,6 +97,10 @@ func NewPxGridRadiusFailure(ctrl *PxGridConsumer) RadiusFailure {
 			log:  ctrl.cfg.Logger.With("svc", RadiusFailureServiceName),
 		},
 	}
+}
+
+func (r *pxGridRadiusFailure) Rest() RadiusFailureRest {
+	return r
 }
 
 // GetFailures retrieves the list of failures from the radius failure service

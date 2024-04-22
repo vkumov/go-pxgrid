@@ -79,9 +79,7 @@ type (
 		OnStatusTopic() Subscriber[ANCOperationStatus]
 	}
 
-	ANCConfig interface {
-		PxGridService
-
+	ANCRest interface {
 		GetPolicies() CallFinalizer[*[]ANCPolicy]
 		GetPolicyByName(name string) CallFinalizer[*ANCPolicy]
 		CreatePolicy(policy ANCPolicy) NoResultCallFinalizer
@@ -100,6 +98,12 @@ type (
 		ClearEndpointPolicy(request ANCClearPolicyRequest) CallFinalizer[*ANCOperationStatus]
 
 		GetOperationStatus(operationID string) CallFinalizer[*ANCOperationStatus]
+	}
+
+	ANCConfig interface {
+		PxGridService
+
+		Rest() ANCRest
 
 		ANCConfigSubscriber
 
@@ -125,6 +129,10 @@ func NewPxGridANCConfig(ctrl *PxGridConsumer) ANCConfig {
 			log:  ctrl.cfg.Logger.With("svc", ANCConfigServiceName),
 		},
 	}
+}
+
+func (a *pxGridANC) Rest() ANCRest {
+	return a
 }
 
 func (a *pxGridANC) GetPolicies() CallFinalizer[*[]ANCPolicy] {

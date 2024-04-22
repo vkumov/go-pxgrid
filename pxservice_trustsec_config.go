@@ -142,14 +142,18 @@ type (
 		OnEgressPolicyTopic() Subscriber[EgressPolicyTopicMessage]
 	}
 
-	TrustSecConfiguration interface {
-		PxGridService
-
+	TrustSecConfigurationRest interface {
 		GetSecurityGroups(filters ...TrustSecConfigurationRequestFilter) CallFinalizer[*GetSecurityGroupsResponse]
 		GetSecurityGroupACLs(filters ...TrustSecConfigurationRequestFilter) CallFinalizer[*GetSecurityGroupACLsResponse]
 		GetVirtualNetwork(filters ...TrustSecConfigurationRequestFilter) CallFinalizer[*GetVirtualNetworksResponse]
 		GetEgressPolicies(filters ...TrustSecEgressPoliciesRequestFilter) CallFinalizer[*GetEgressPoliciesResponse]
 		GetEgressMatrices() CallFinalizer[*[]EgressMatrix]
+	}
+
+	TrustSecConfiguration interface {
+		PxGridService
+
+		Rest() TrustSecConfigurationRest
 
 		TrustSecConfigurationSubscriber
 
@@ -179,6 +183,10 @@ func NewPxGridTrustSecConfiguration(ctrl *PxGridConsumer) TrustSecConfiguration 
 			log:  ctrl.cfg.Logger.With("svc", TrustSecConfigurationServiceName),
 		},
 	}
+}
+
+func (t *pxGridTrustSecConfiguration) Rest() TrustSecConfigurationRest {
+	return t
 }
 
 func (t *pxGridTrustSecConfiguration) Properties() TrustSecConfigurationPropsProvider {

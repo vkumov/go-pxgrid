@@ -30,10 +30,14 @@ type (
 		OnBindingTopic() Subscriber[TrustSecSXPBindingTopicMessage]
 	}
 
+	TrustSecSXPRest interface {
+		GetBindings(filter any) CallFinalizer[*[]TrustSecSXPBinding]
+	}
+
 	TrustSecSXP interface {
 		PxGridService
 
-		GetBindings(filter any) CallFinalizer[*[]TrustSecSXPBinding]
+		Rest() TrustSecSXPRest
 
 		TrustSecSXPSubscriber
 
@@ -59,6 +63,10 @@ func NewPxGridTrustSecSXP(ctrl *PxGridConsumer) TrustSecSXP {
 			log:  ctrl.cfg.Logger.With("svc", TrustSecSXPServiceName),
 		},
 	}
+}
+
+func (t *pxGridTrustSecSXP) Rest() TrustSecSXPRest {
+	return t
 }
 
 func (t *pxGridTrustSecSXP) Properties() TrustSecSXPPropsProvider {

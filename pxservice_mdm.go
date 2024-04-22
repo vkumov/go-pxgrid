@@ -40,13 +40,17 @@ type (
 		OnEndpointTopic() Subscriber[MDMEndpoint]
 	}
 
-	MDM interface {
-		PxGridService
-
+	MDMRest interface {
 		GetEndpoints(filter *MDMEndpoint) CallFinalizer[*[]MDMEndpoint]
 		GetEndpointByMacAddress(macAddress string) CallFinalizer[*MDMEndpoint]
 		GetEndpointsByType(endpointType MDMEndpointType) CallFinalizer[*[]MDMEndpoint]
 		GetEndpointsByOsType(osType MDMOSType) CallFinalizer[*[]MDMEndpoint]
+	}
+
+	MDM interface {
+		PxGridService
+
+		Rest() MDMRest
 
 		MDMSubscriber
 
@@ -80,6 +84,10 @@ func NewPxGridMDM(ctrl *PxGridConsumer) MDM {
 			log:  ctrl.cfg.Logger.With("svc", MDMServiceName),
 		},
 	}
+}
+
+func (s *pxGridMDM) Rest() MDMRest {
+	return s
 }
 
 // GetEndpoints retrieves the endpoints from the MDM service

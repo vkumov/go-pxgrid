@@ -28,11 +28,15 @@ type (
 		RestBaseURL() (string, error)
 	}
 
+	SystemHealthRest interface {
+		GetHealths(nodeName string, startTimestamp string) CallFinalizer[*[]SysHealth]
+		GetPerformances(nodeName string, startTimestamp string) CallFinalizer[*[]SysPerformance]
+	}
+
 	SystemHealth interface {
 		PxGridService
 
-		GetHealths(nodeName string, startTimestamp string) CallFinalizer[*[]SysHealth]
-		GetPerformances(nodeName string, startTimestamp string) CallFinalizer[*[]SysPerformance]
+		Rest() SystemHealthRest
 
 		Properties() SystemHealthPropsProvider
 	}
@@ -54,6 +58,10 @@ func NewPxGridSystemHealth(ctrl *PxGridConsumer) SystemHealth {
 			log:  ctrl.cfg.Logger.With("svc", SystemHealthServiceName),
 		},
 	}
+}
+
+func (s *pxGridSystemHealth) Rest() SystemHealthRest {
+	return s
 }
 
 func (s *pxGridSystemHealth) GetHealths(nodeName string, startTimestamp string) CallFinalizer[*[]SysHealth] {
