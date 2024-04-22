@@ -31,6 +31,12 @@ type PxGridService interface {
 	FindProperty(ctx context.Context, property string, nodePick ...ServiceNodePickerFactory) (any, error)
 	FindNodeIndexByName(name string) (int, error)
 	On(topicProperty string) Subscriber[any]
+
+	GenericRESTCaller
+}
+
+type GenericRESTCaller interface {
+	AnyREST(call string, payload map[string]any) CallFinalizer[any]
 }
 
 var _ PxGridService = (*pxGridService)(nil)
@@ -189,6 +195,10 @@ func (s *pxGridService) Nodes() []ServiceNode {
 
 func (s *pxGridService) On(topicProperty string) Subscriber[any] {
 	return newSubscriber[any](s, topicProperty, nil)
+}
+
+func (s *pxGridService) AnyREST(call string, payload map[string]any) CallFinalizer[any] {
+	return newCall[any](s, call, payload, simpleResultMapper[any])
 }
 
 func (s *pxGridService) overAll(ctx context.Context, call string, payload any, result any,
