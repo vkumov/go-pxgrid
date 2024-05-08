@@ -72,6 +72,9 @@ func (c *PxGridConsumer) AccountCreate(ctx context.Context) (AccountCreateRespon
 		return AccountCreateResponse{}, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
+	c.cfg.Auth.Password = res.Result.(*AccountCreateResponse).Password
+	c.svc.auth.Password = res.Result.(*AccountCreateResponse).Password
+
 	return *(res.Result.(*AccountCreateResponse)), nil
 }
 
