@@ -54,7 +54,7 @@ func (s ServiceNodeSlice) GetPropertyString(name string) (string, error) {
 }
 
 type ServiceNodePicker interface {
-	PickNode() (ServiceNode, bool, error)
+	PickNode() (*ServiceNode, bool, error)
 }
 
 type ServiceNodePickerFactory func(ServiceNodeSlice) ServiceNodePicker
@@ -65,19 +65,19 @@ type predicateNodePicker struct {
 	last      int
 }
 
-func (p *predicateNodePicker) PickNode() (ServiceNode, bool, error) {
+func (p *predicateNodePicker) PickNode() (*ServiceNode, bool, error) {
 	if len(p.nodes) == 0 {
-		return ServiceNode{}, false, ErrNoNodes
+		return nil, false, ErrNoNodes
 	}
 
 	for i := p.last; i < len(p.nodes); i++ {
 		if p.predicate(i, p.nodes[i]) {
 			p.last = i
-			return p.nodes[i], i < len(p.nodes)-1, nil
+			return &p.nodes[i], i < len(p.nodes)-1, nil
 		}
 	}
 
-	return ServiceNode{}, false, ErrNodeNotFound
+	return nil, false, ErrNodeNotFound
 }
 
 type randomNodePicker struct {
@@ -85,16 +85,16 @@ type randomNodePicker struct {
 	indexesLeft []int
 }
 
-func (p *randomNodePicker) PickNode() (ServiceNode, bool, error) {
+func (p *randomNodePicker) PickNode() (*ServiceNode, bool, error) {
 	if len(p.indexesLeft) == 0 {
-		return ServiceNode{}, false, ErrNoNodes
+		return nil, false, ErrNoNodes
 	}
 
 	index := rand.Intn(len(p.indexesLeft))
 	node := p.nodes[p.indexesLeft[index]]
 	p.indexesLeft = append(p.indexesLeft[:index], p.indexesLeft[index+1:]...)
 
-	return node, len(p.indexesLeft) > 0, nil
+	return &node, len(p.indexesLeft) > 0, nil
 }
 
 func RandomNodePicker() ServiceNodePickerFactory {

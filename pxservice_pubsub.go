@@ -124,7 +124,11 @@ func (p *pxGridPubSub) createEndpoint(wsURL, secret string) *PubSubEndpoint {
 	return ep
 }
 
-func (p *pxGridPubSub) getEndpoint(node ServiceNode) (*PubSubEndpoint, error) {
+func (p *pxGridPubSub) getEndpoint(node *ServiceNode) (*PubSubEndpoint, error) {
+	if node == nil {
+		return nil, ErrNoNodePicked
+	}
+
 	p.epMutex.Lock()
 	defer p.epMutex.Unlock()
 
