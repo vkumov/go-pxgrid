@@ -192,7 +192,7 @@ type (
 
 	Response struct {
 		StatusCode int
-		Body       []byte
+		Body       string
 		Result     interface{}
 	}
 )
@@ -301,7 +301,7 @@ func (r *Request) Post(u string, payload interface{}) (*Response, error) {
 	}
 
 	done := Response{
-		Body:       resp.Body(),
+		Body:       resp.String(),
 		StatusCode: resp.StatusCode(),
 	}
 	if r.result != nil {

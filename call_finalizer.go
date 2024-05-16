@@ -9,7 +9,7 @@ type (
 	FullResponse[R any] struct {
 		StatusCode int
 		Result     R
-		Body       []byte
+		Body       string
 	}
 
 	NoResultResponse struct {
