@@ -172,6 +172,17 @@ func (s *subscriber[T]) Subscribe(ctx context.Context) (*Subscription[T], error)
 		return nil, err
 	}
 
+	for _, pNode := range s.pubsub.Nodes() {
+		s.svc.log.Debug("PubSub Node", "node", pNode.NodeName)
+		if pNode.Secret == "" {
+			err := s.pubsub.UpdateSecrets(ctx)
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+	}
+
 	topic, err := s.getTopic(ctx)
 	if err != nil {
 		return nil, err
