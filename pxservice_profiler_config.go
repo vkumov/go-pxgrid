@@ -25,7 +25,7 @@ type (
 	ProfilerConfigurationTopic string
 
 	ProfilerConfigurationSubscriber interface {
-		OnProfileTopic() Subscriber[ProfilerTopicMessage]
+		OnTopic() Subscriber[ProfilerTopicMessage]
 	}
 
 	ProfilerConfigurationRest interface {
@@ -102,7 +102,7 @@ func (s *pxGridProfilerConfiguration) Topic() (string, error) {
 	return s.nodes.GetPropertyString(string(ProfilerConfigurationTopicProfile))
 }
 
-func (s *pxGridProfilerConfiguration) OnProfileTopic() Subscriber[ProfilerTopicMessage] {
+func (s *pxGridProfilerConfiguration) OnTopic() Subscriber[ProfilerTopicMessage] {
 	return newSubscriber[ProfilerTopicMessage](
 		&s.pxGridService,
 		string(ProfilerConfigurationTopicProfile),
